@@ -5,8 +5,22 @@ $ports_to_check = 8995, 8465, 9999, 4443, 995, 465
 
 $services_to_check = , "CGM_KIM_ClientModule", "kv.dox KIM Clientmodul Service"
 
-$ms_path = "D:\medistar\"
+$ms_path = "d:\medistar\"
 $sys_path = "C:\Windows\SysWOW64\sysconf.s"
+
+
+$certificates_to_check = "KIM\KIM_Assist\data\kim\data\*.p12"
+$certificates_to_check2 = "KIM\KIM_Assist\data\kim\data\"
+
+$reg_key_java_path = "Registry::HKLM\SOFTWARE\WOW6432Node\CompuGROUP\Java Runtime Environment"
+
+$kim_assist_path = "KIM\KIM_Assist\"
+$kim_assist_current_version = "KIM-Einrichtung-Assistent.jar"
+$kim_assist_old_version = "KIM-Einrichtung-Assistent-1.0.14.jar"
+
+$kim_client_path = "KIM\KIM_Clientmodul\"
+$kim_client_current_version = "KIM-CM-10.0.2-10.jar"
+$kim_client_old_version = "KIM-CM-10.0.2-9.jar"
 
 # --- Ab hier müssen keine Änderungen mehr vergenommen werden ---
 
@@ -97,8 +111,245 @@ function Portcheck {
         }
         
     }
+}
+
+function KimAssistInstallationCheck {
+	Write-Host "  KIM Assist"
+    # Prüfen, ob KIM Assist existiert
+	$assist_path = Join-Path -path $ms_path -ChildPath $kim_assist_path
+    if (! (Test-Path -path $assist_path)) {
+        Show-Icon "error"
+        Write-Host "Keine KIM Assist Installation gefunden: $assist_path"
+        return
+    }
+	
+	$kim_assist_lib = "data\kim\lib"
+	$libpath = Join-Path -path $assist_path -ChildPath $kim_assist_lib
+	
+	# Prüfen, ob aktuelle KIM Assist Version existiert
+	$assist_cur_version = Join-Path -path $libpath -ChildPath $kim_assist_current_version
+	if (! (Test-Path -path $assist_cur_version) ) {
+		Show-Icon "error"
+        Write-Host "Keine aktuelle KIM Assist Version gefunden: $assist_cur_version"
+	} else {
+		Show-Icon "success"
+        Write-Host "Aktuelle KIM Assist Version gefunden: $assist_cur_version"
+	}
+	
+	#Prüfen, ob alte KIM Assist Version existiert
+    $kim_old_version = Join-Path -path $libpath -ChildPath $kim_assist_old_version
+	if ( (Test-Path -path $kim_old_version) ) {
+		Show-Icon "error"
+        Write-Host "Alte KIM Assist Version gefunden, bitte loeschen: $kim_old_version"
+	}
+}
+
+function KimClientmodulInstallationCheck {
+	Write-Host ""
+	Write-Host "  KIM Clientmodul"
+	
+	# Prüfen, ob KIM Clientmodul existiert
+    $client_path = Join-Path -path $ms_path -ChildPath $kim_client_path
+    if (! (Test-Path -path $client_path)) {
+        Show-Icon "error"
+        Write-Host "Keine KIM Assist Installation gefunden: $client_path"
+        return
+    }
+	
+    $kim_client_lib = "libs\common"
+	$commonpath = Join-Path -path $client_path -ChildPath $kim_client_lib
+	
+	# Prüfen, ob aktuelle KIM Clientmodul Version existiert
+	$client_cur_version = Join-Path -path $commonpath -ChildPath $kim_client_current_version
+	if (! (Test-Path -path $client_cur_version) ) {
+		Show-Icon "error"
+        Write-Host "Keine aktuelle KIM Clientmodul Version gefunden: $client_cur_version"
+	} else {
+		Show-Icon "success"
+        Write-Host "Aktuelle KIM Clientmodul Version gefunden: $client_cur_version"
+	}
+	
+	#Prüfen, ob alte KIM Clientmodul Version existiert
+    $client_old_version = Join-Path -path $commonpath -ChildPath $kim_client_old_version
+	if ( (Test-Path -path $client_old_version) ) {
+		Show-Icon "error"
+        Write-Host "Alte KIM Clientmodul Version gefunden, bitte loeschen: $client_old_version"
+	}
+}
+
+
+function MedistarJavaPathCheck {
+
+    # Prüfen ob Registry-Key existiert
+    if ((Test-Path $reg_key_java_path) -eq $false) {
+        Show-Icon "error"
+        Write-Host "MEDISTAR-InstallationsPfad nicht in Registry ($reg_key_java_path)"
+        return $false
+    }
+
+    # Registry-Key auslesen
+    $MEDISTA_JAVA_PFAD = Get-ItemProperty -Path "Registry::HKLM\SOFTWARE\WOW6432Node\CompuGROUP\Java Runtime Environment" -Name CurrentPath -ErrorAction SilentlyContinue
+    if (! $MEDISTA_JAVA_PFAD) {
+        Show-Icon "error"
+        Write-Host "MEDISTAR-Javapfad ist nicht in Registry ($MEDISTAR_JAVA_PATH)"
+        return $false
+    }
+
+	$Javapfad = $MEDISTA_JAVA_PFAD.CurrentPath	
+	
+	# Prüfen ob Java-Verzeichnis existiert
+	if ( !(Test-Path -path $Javapfad) ) {
+		Show-Icon "error"
+		Write-Host "Medistar-Javaverzeichnis ist nicht vorhanden: $Javapfad"
+		Write-Host "      Bzw. der Registry-Schluessel muss angepasst werden: HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\CompuGROUP\Java Runtime Environment\CurrentPath"
+		return
+	}
+	
+	if ( $Javapfad -Match "\(x86\)" ) {
+		Show-Icon "error"
+	    Write-Host "Java-Installation falsch installiert: ($Javapfad)   -> Bitte nach (Laufwerk:\CG\ installieren)"
+	}
+	else {
+		Show-Icon "success"
+	    Write-Host "Java-Installation richtig installiert: ($Javapfad)"
+	}
 
 }
+
+function RESTCheck {
+    try {
+        #Prüfen, ob REST-Schnitstelle als Status "OK" zurückgibt
+        $r = Invoke-WebRequest -URI "http://localhost:9999/status" -UseBasicParsing
+        $res = $r.RawContent
+        if ($res.contains("OK")) {
+            Show-Icon "success"
+            Write-Host "REST-Schnittstelle liefert Status: OK"
+        }
+        else {
+            Show-Icon "error"
+            Write-Host "REST-Schnittstelle liefert Status: $res"
+        }
+       
+    }
+    catch {
+        Show-Icon "error"
+        Write-Host "REST-Schnittstelle (Port 9999) konnte nicht angesprochen werden"
+    } 
+}
+
+function CheckDocPortal {
+	$ConnectPfad = Get-ItemProperty -Path "Registry::HKCU\Software\CompuGROUP\DocPortal" -Name binary -ErrorAction SilentlyContinue
+	
+	$connect = $ConnectPfad.binary
+	if ( !$connect ) {
+		Show-Icon "error"
+        Write-Host "Registry-Docportal Pfad wurde nicht gefunden: \HKEY_CURRENT_USER\Software\CompuGROUP\DocPortal -> binary"
+		return
+	}
+	
+	if ( $connect -Match "mslib_local" ) {
+		Show-Icon "success"
+	    Write-Host "Registry-Docportal Pfad: $connect";
+	}
+	else {
+		Show-Icon "error"
+        Write-Host "Registry-Docportal Pfad ist falsch: $connect   -> Im Regisrtry (\HKEY_CURRENT_USER\Software\CompuGROUP\DocPortal) anpassen"
+	}
+}
+
+function GetMedistarPath {
+
+    # Prüfen ob Umgebungsvariable gesetzt worden ist
+	$Medistar_Path = $ENV:medistardir
+    if ( ! $Medistar_Path ) {
+        Show-Icon "error"
+        Write-Host "MEDISTAR-Umgebungsvariable wurde nicht gesetzt"
+        return $false
+    }
+	
+	# Prüfen, ob Pfad existiert
+    if (! (Test-Path -path $Medistar_Path)) {
+        Show-Icon "error"
+        Write-Host "MEDISTAR-Installationspfad existiert nicht: $Medistar_Path"
+        return $false
+    }
+	
+	Show-Icon "success"
+	Write-Host "Medistar-Umgebungsvariable gefunden: $Medistar_Path"
+
+	return $Medistar_Path
+}
+
+function CheckMsNet {	
+	# Prüfen ob MSNETIN Verzeichnis vorhanden ist
+	$msnetin = "MSNETIN"
+	$fpath = Join-Path -path $ms_path -ChildPath $msnetin
+	if (Test-Path -path $fpath ) {
+		Show-Icon "success"
+        Write-Host "Verzeichnis ist vorhanden: $fpath"
+	}
+	else {
+		Show-Icon "error"
+        Write-Host "Verzeichnis ist nicht vorhanden: $fpath  -> Bitte neu erstellen"
+	}
+	
+    # Prüfen ob MSNETOU Verzeichnis vorhanden ist
+	$msnetout = "MSNETOUT"
+	$f2path = Join-Path -path $ms_path -ChildPath $msnetout
+	if (Test-Path -path $f2path ) {
+		Show-Icon "success"
+        Write-Host "Verzeichnis ist vorhanden: $f2path"
+	}
+	else {
+		Show-Icon "error"
+        Write-Host "Verzeichnis ist nicht vorhanden: $f2path  -> Bitte neu erstellen"
+	}
+}
+
+function Checkcardverification {
+    $fehlerlog = "KIM\KIM_Clientmodul\logs\cm.fehler.log"
+    $fpath = Join-Path -path $ms_path -ChildPath $fehlerlog
+
+    #Prüfen, ob Datei existiert
+    if (! (Test-Path -path $fpath)) {
+        Show-Icon "error"
+        Write-Host "Kein 'cm.fehler.log' gefunden: $fpath"
+        return
+    }
+
+    #Wenn "has PinStatus 'VERIFIED'" im Log vorkommt, ist der PinStatus verifiziert
+    if ((Get-Content $fpath) -Match "has PinStatus 'VERIFIED'") {
+        Show-Icon "success"
+        Write-Host "PinStatus ist verifiziert"
+    }
+    else {
+        Show-Icon "error"
+        Write-Host "PinStatus ist nicht verifiziert"
+    }
+
+}
+
+function MailCheck {
+    $certificates_to_check= "KIM\KIM_Assist\data\kim\data\*.p12"
+    $fpath = Join-Path -path $ms_path -ChildPath $certificates_to_check
+
+    #Prüfen, ob Datei existiert
+    if (! (Test-Path -path $fpath)) {
+        Show-Icon "error"
+        Write-Host "Keine *.p12-Datei in '$fpath'"
+        return
+    }
+
+    $certificates_to_check2 = "KIM\KIM_Assist\data\kim\data\"
+    $fpath = Join-Path -path $ms_path -ChildPath $certificates_to_check2
+
+    Get-ChildItem -Path $fpath -Filter *.p12 -File -Name | ForEach-Object {
+        $mailAdress = [System.IO.Path]::GetFileNameWithoutExtension($_)
+        Show-Icon "success"
+        Write-Host "KIM-Addresse: '$mailAdress'"
+    }
+}
+
 
 function Servicecheck {
     param(
@@ -250,7 +501,7 @@ function sysconf {
     Copy-Item -Path $sys_path -Destination "d:\medistar\sysconf.txt"
     
     #sysconf auslesen
-    $content = Get-Content "d:\medistar\sysconf.txt" | Where-Object {$_ -like "*MS4 = d:\MEDISTAR\para*"}
+    $content = Get-Content "c:\medistar\sysconf.txt" | Where-Object {$_ -like "*MS4 = d:\MEDISTAR\para*"}
 
     #Prüfen ob der UNC-Pfad hinterlegt ist
     #$ms4 = Get-Content $content
@@ -265,7 +516,7 @@ function sysconf {
     }
 }
 
-function admin{
+function admin {
         
     $role = whoami /groups /fo csv | convertfrom-csv | where-object { $_.SID -eq "S-1-5-32-544" }
 
@@ -278,12 +529,12 @@ function admin{
     }
 }
 
-function dbms{
+function dbms {
 
     $exe = "\prg4\m42t.exe"    
     $version = (Get-Item (Join-Path -path $ms_path -Childpath $exe)).VersionInfo.ProductVersion
 
-    if ($version -ge "404.76"){
+    if ($version -ge "404.78"){
         Show-Icon "success"
         Write-Host "Medistar ist aktuell: $version"
     }else{
@@ -314,6 +565,34 @@ if ($inp -eq "v"){
     Write-Host "  ---------------------------------"
     dbms
     Write-Host ""
+
+    #KIM Einrichtungsassist jar
+    Write-Host ""
+    Write-Host "  KIM Einrichtungsassist.jar"
+    Write-Host "  ---------------------------------"
+    KimAssistInstallationCheck
+    Write-Host ""
+
+    #aktuelle CM Version
+    Write-Host ""
+    Write-Host "  KIM CM Version"
+    Write-Host "  ---------------------------------"
+    KimClientmodulInstallationCheck
+    Write-Host ""
+
+   #Check MsNet-Ordner
+    Write-Host ""
+    Write-Host "  Check MsNet-Ordner"
+    Write-Host "  ---------------------------------"
+    CheckMsNet
+    Write-Host ""
+
+  #Umgebungsvariable
+  Write-Host ""
+  Write-Host "  Umgebungsvariable/Medistar-Pfad"
+  Write-Host "  ---------------------------------"
+  GetMedistarPath
+  Write-Host ""
 
     #Ports checken:
     Write-Host ""
@@ -355,6 +634,41 @@ if ($inp -eq "v"){
     Write-Host "  Connect KIM-Plugin Konfiguration"
     Write-Host "  ---------------------------------"
     Plugin
+    Write-Host ""
+
+   #REST-Check:
+   Write-Host ""
+   Write-Host "  REST-Check"
+   Write-Host "  ---------------------------------"
+   RESTCheck
+   Write-Host ""
+
+  #CG Java Pfad:
+  Write-Host ""
+  Write-Host "  CG Java"
+  Write-Host "  ---------------------------------"
+  MedistarJavaPathCheck
+  Write-Host ""
+
+   #Docportal Registry-Eintrag:
+   Write-Host ""
+   Write-Host "  Docportal Registry-Eintrag"
+   Write-Host "  ---------------------------------"
+   CheckDocPortal
+   Write-Host ""
+
+    #P12-Zertifikate:
+    Write-Host ""
+    Write-Host "  P12-Zertifikate"
+    Write-Host "  ---------------------------------"
+    MailCheck
+    Write-Host ""
+
+    #SMCB Pin Status aus der LOG:
+    Write-Host ""
+    Write-Host "  SMC-B Pin Status"
+    Write-Host "  ---------------------------------"
+    Checkcardverification
     Write-Host ""
 
     #Secret checken:
