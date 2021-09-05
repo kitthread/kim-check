@@ -543,7 +543,7 @@ function dbms {
     $exe = "\prg4\m42t.exe"    
     $version = (Get-Item (Join-Path -path $ms_path -Childpath $exe)).VersionInfo.ProductVersion
 
-    if ($version -ge "404.80"){
+    if ($version -ge "404.79"){
         Show-Icon "success"
         Write-Host "Medistar ist aktuell: $version"
     }else{
