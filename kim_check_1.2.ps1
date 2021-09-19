@@ -226,7 +226,17 @@ function MedistarJavaPathCheck {
 }
 
 function RESTCheck {
-    try {
+    $plugin_config = "para\msinclude\globalvariable\CGMCONNECT_CONFIGS\KOMLEPlugin\config.xml"
+    $fpath = Join-Path -path $ms_path -ChildPath $plugin_config
+
+    # XML-Datei einlesen
+    [XML]$connect = Get-Content $fpath
+    
+    # Management Port einlesen
+    $MGMT = $connect.GeneralConfiguration.komLeClientManagementPort
+    
+    if($MGMT -eq 9999){
+        try {
         #Prüfen, ob REST-Schnitstelle als Status "OK" zurückgibt
         $r = Invoke-WebRequest -URI "http://localhost:9999/status" -UseBasicParsing
         $res = $r.RawContent
@@ -243,7 +253,27 @@ function RESTCheck {
     catch {
         Show-Icon "error"
         Write-Host "REST-Schnittstelle (Port 9999) konnte nicht angesprochen werden"
-    } 
+        } 
+    }else{
+        try {
+        #Prüfen, ob REST-Schnitstelle als Status "OK" zurückgibt
+        $r = Invoke-WebRequest -URI "http://localhost:4443/status" -UseBasicParsing
+        $res = $r.RawContent
+        if ($res.contains("OK")) {
+            Show-Icon "success"
+            Write-Host "REST-Schnittstelle liefert Status: OK"
+        }
+        else {
+            Show-Icon "error"
+            Write-Host "REST-Schnittstelle liefert Status: $res"
+        }
+       
+    }
+    catch {
+        Show-Icon "error"
+        Write-Host "REST-Schnittstelle (Port 4443) konnte nicht angesprochen werden"
+        } 
+    }        
 }
 
 function CheckDocPortal {
