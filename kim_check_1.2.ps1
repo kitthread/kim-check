@@ -235,10 +235,16 @@ function RESTCheck {
     # Management Port einlesen
     $MGMT = $connect.GeneralConfiguration.komLeClientManagementPort
     
-    if($MGMT -eq 9999){
+    if ( ! $MGMT ) {
+        Show-Icon "error"
+        Write-Host "kein Management Port gesetzt"
+        return
+    }
+
+    if($MGMT){
         try {
         #Prüfen, ob REST-Schnitstelle als Status "OK" zurückgibt
-        $r = Invoke-WebRequest -URI "http://localhost:9999/status" -UseBasicParsing
+        $r = Invoke-WebRequest -URI "http://localhost:"+$MGMT+"/status" -UseBasicParsing
         $res = $r.RawContent
         if ($res.contains("OK")) {
             Show-Icon "success"
@@ -252,28 +258,9 @@ function RESTCheck {
     }
     catch {
         Show-Icon "error"
-        Write-Host "REST-Schnittstelle (Port 9999) konnte nicht angesprochen werden"
+        Write-Host "REST-Schnittstelle (Port"$MGMT") konnte nicht angesprochen werden"
         } 
-    }else{
-        try {
-        #Prüfen, ob REST-Schnitstelle als Status "OK" zurückgibt
-        $r = Invoke-WebRequest -URI "http://localhost:4443/status" -UseBasicParsing
-        $res = $r.RawContent
-        if ($res.contains("OK")) {
-            Show-Icon "success"
-            Write-Host "REST-Schnittstelle liefert Status: OK"
-        }
-        else {
-            Show-Icon "error"
-            Write-Host "REST-Schnittstelle liefert Status: $res"
-        }
-       
     }
-    catch {
-        Show-Icon "error"
-        Write-Host "REST-Schnittstelle (Port 4443) konnte nicht angesprochen werden"
-        } 
-    }        
 }
 
 function CheckDocPortal {
@@ -582,6 +569,21 @@ function dbms {
     }
 }
 
+function FWCheck{
+
+    $com = powershell Get-NetFirewallRule -Displayname *KIM | select DisplayName, Direction, Enabled, PrimaryStatus
+
+    if (! $com){
+        Show-Icon "error"
+        Write-Warning "keine Windows-Firewall-Regeln gesetzt"
+
+    }else{
+        Show-Icon "success"
+        Write-Host "Windows-Firewall-Regeln wurden gesetzt"
+    }
+
+}
+
 #Banner anzeigen:
 PrintBanner
 Write-Host ""
@@ -716,5 +718,13 @@ if ($inp -eq "v"){
     Write-Host "  ---------------------------------"
     Secret
     Write-Host ""
+
+    #FW checken:
+    Write-Host ""
+    Write-Host "  Windows Firewall"
+    Write-Host "  ---------------------------------"
+    FWCHeck
+    Write-Host ""
+
     pause
 }
