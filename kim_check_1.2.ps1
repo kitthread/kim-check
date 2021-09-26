@@ -6,7 +6,7 @@ $ports_to_check = 8995, 8465, 9999, 4443, 995, 465
 
 $services_to_check = , "CGM_KIM_ClientModule", "kv.dox KIM Clientmodul Service"
 
-$ms_path = "d:\medistar\"
+$ms_path = $ENV:medistardir
 $sys_path = "C:\Windows\SysWOW64\sysconf.s"
 
 
@@ -289,15 +289,15 @@ function GetMedistarPath {
 	$Medistar_Path = $ENV:medistardir
     if ( ! $Medistar_Path ) {
         Show-Icon "error"
-        Write-Host "MEDISTAR-Umgebungsvariable wurde nicht gesetzt"
-        return $false
+        Write-Warning "MEDISTAR-Umgebungsvariable wurde nicht gesetzt"
+        return #$false
     }
 	
 	# Prüfen, ob Pfad existiert
     if (! (Test-Path -path $Medistar_Path)) {
         Show-Icon "error"
-        Write-Host "MEDISTAR-Installationspfad existiert nicht: $Medistar_Path"
-        return $false
+        Write-Warning "MEDISTAR-Installationspfad existiert nicht: $Medistar_Path"
+        return #$false
     }
 	
 	Show-Icon "success"
@@ -524,21 +524,21 @@ function sysconf {
     Show-Icon "success"
     Write-Host "sysconf.s vorhanden"
 
-    Copy-Item -Path $sys_path -Destination "d:\medistar\sysconf.txt"
+    Copy-Item -Path $sys_path -Destination $ms_path"\sysconf.txt"
     
     #sysconf auslesen
-    $content = Get-Content "d:\medistar\sysconf.txt" | Where-Object {$_ -like "*MS4 = d:\MEDISTAR\para*"}
+    $content = Get-Content $ms_path"\sysconf.txt" | Where-Object {$_ -like "*MS4 = "+$ms_path+"\para*"}
 
     #Prüfen ob der UNC-Pfad hinterlegt ist
     #$ms4 = Get-Content $content
 
-    if ($content -like "*MS4 = d:\MEDISTAR\para*"){
+    if ($content -like "*MS4 = "+$ms_path+"\para*"){
         Show-Icon "success"
         Write-Host "lokaler Pfad in der sysconf.s"
     }
     else {
         Show-Icon "error"
-        Write-Warning "UNC-Pfad, bitte korrigieren in d:\medistar"
+        Write-Warning "UNC-Pfad, bitte korrigieren in den lokalen Pfad"
     }
 }
 
@@ -593,64 +593,65 @@ $inp = Read-Host -Prompt "[v]or der Installation oder [d]anach?"
 
 if ($inp -eq "v"){
 
-    #Windowsnutzer testen
-    Write-Host ""
-    Write-Host "  administrative Rechte"
-    Write-Host "  ---------------------------------"
-    admin
-    Write-Host ""
+   #Umgebungsvariable
+   Write-Host ""
+   Write-Host "  Umgebungsvariable/Medistar-Pfad"
+   Write-Host "  ---------------------------------"
+   GetMedistarPath
+   Write-Host ""
+   pause
+   
+   #Windowsnutzer testen
+   Write-Host ""
+   Write-Host "  administrative Rechte"
+   Write-Host "  ---------------------------------"
+   admin
+   Write-Host ""
 
-    #Medistarversion testen
-    Write-Host ""
-    Write-Host "  Medistarversion testen"
-    Write-Host "  ---------------------------------"
-    dbms
-    Write-Host ""
+   #Medistarversion testen
+   Write-Host ""
+   Write-Host "  Medistarversion testen"
+   Write-Host "  ---------------------------------"
+   dbms
+   Write-Host ""
 
-    #KIM Einrichtungsassist jar
-    Write-Host ""
-    Write-Host "  KIM Einrichtungsassist.jar"
-    Write-Host "  ---------------------------------"
-    KimAssistInstallationCheck
-    Write-Host ""
+   #KIM Einrichtungsassist jar
+   Write-Host ""
+   Write-Host "  KIM Einrichtungsassist.jar"
+   Write-Host "  ---------------------------------"
+   KimAssistInstallationCheck
+   Write-Host ""
 
-    #aktuelle CM Version
-    Write-Host ""
-    Write-Host "  KIM CM Version"
-    Write-Host "  ---------------------------------"
-    KimClientmodulInstallationCheck
-    Write-Host ""
+   #aktuelle CM Version
+   Write-Host ""
+   Write-Host "  KIM CM Version"
+   Write-Host "  ---------------------------------"
+   KimClientmodulInstallationCheck
+   Write-Host ""
 
    #Check MsNet-Ordner
-    Write-Host ""
-    Write-Host "  Check MsNet-Ordner"
-    Write-Host "  ---------------------------------"
-    CheckMsNet
-    Write-Host ""
+   Write-Host ""
+   Write-Host "  Check MsNet-Ordner"
+   Write-Host "  ---------------------------------"
+   CheckMsNet
+   Write-Host ""
 
-  #Umgebungsvariable
-  Write-Host ""
-  Write-Host "  Umgebungsvariable/Medistar-Pfad"
-  Write-Host "  ---------------------------------"
-  GetMedistarPath
-  Write-Host ""
+   #Ports checken:
+   Write-Host ""
+   Write-Host "  Checken der Ports"
+   Write-Host "  ---------------------------------"
+   foreach ($port in $ports_to_check) {
+   Portcheck $port
+   }
+   Write-Host ""
 
-    #Ports checken:
-    Write-Host ""
-    Write-Host "  Checken der Ports"
-    Write-Host "  ---------------------------------"
-    foreach ($port in $ports_to_check) {
-    Portcheck $port
-    }
-    Write-Host ""
-
-    #sysconf.s checken
-    Write-Host ""
-    Write-Host "  Checken der sysconf"
-    Write-Host "  ---------------------------------"
-    sysconf
-    Write-Host ""
-    pause
+   #sysconf.s checken
+   Write-Host ""
+   Write-Host "  Checken der sysconf"
+   Write-Host "  ---------------------------------"
+   sysconf
+   Write-Host ""
+   pause
 }else{
     #Services checken:
     Write-Host ""
@@ -677,26 +678,26 @@ if ($inp -eq "v"){
     Plugin
     Write-Host ""
 
-   #REST-Check:
-   Write-Host ""
-   Write-Host "  REST-Check"
-   Write-Host "  ---------------------------------"
-   RESTCheck
-   Write-Host ""
+    #REST-Check:
+    Write-Host ""
+    Write-Host "  REST-Check"
+    Write-Host "  ---------------------------------"
+    RESTCheck
+    Write-Host ""
 
-  #CG Java Pfad:
-  Write-Host ""
-  Write-Host "  CG Java"
-  Write-Host "  ---------------------------------"
-  MedistarJavaPathCheck
-  Write-Host ""
+    #CG Java Pfad:
+    Write-Host ""
+    Write-Host "  CG Java"
+    Write-Host "  ---------------------------------"
+    MedistarJavaPathCheck
+    Write-Host ""
 
-   #Docportal Registry-Eintrag:
-   Write-Host ""
-   Write-Host "  Docportal Registry-Eintrag"
-   Write-Host "  ---------------------------------"
-   CheckDocPortal
-   Write-Host ""
+    #Docportal Registry-Eintrag:
+    Write-Host ""
+    Write-Host "  Docportal Registry-Eintrag"
+    Write-Host "  ---------------------------------"
+    CheckDocPortal
+    Write-Host ""
 
     #P12-Zertifikate:
     Write-Host ""
