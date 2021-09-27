@@ -244,7 +244,7 @@ function RESTCheck {
     if($MGMT){
         try {
         #Prüfen, ob REST-Schnitstelle als Status "OK" zurückgibt
-        $r = Invoke-WebRequest -URI "http://localhost:"+$MGMT+"/status" -UseBasicParsing
+        $r = Invoke-WebRequest -URI "http://localhost:$MGMT/status" -UseBasicParsing
         $res = $r.RawContent
         if ($res.contains("OK")) {
             Show-Icon "success"
