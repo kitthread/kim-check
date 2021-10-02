@@ -226,42 +226,37 @@ function MedistarJavaPathCheck {
 }
 
 function RESTCheck {
-    $plugin_config = "para\msinclude\globalvariable\CGMCONNECT_CONFIGS\KOMLEPlugin\config.xml"
-    $fpath = Join-Path -path $ms_path -ChildPath $plugin_config
-
-    # XML-Datei einlesen
-    [XML]$connect = Get-Content $fpath
     
-    # Management Port einlesen
-    $MGMT = $connect.GeneralConfiguration.komLeClientManagementPort
-    
-    if ( ! $MGMT ) {
-        Show-Icon "error"
-        Write-Host "kein Management Port gesetzt"
-        return
-    }
-
-    if($MGMT){
-        try {
-        #Prüfen, ob REST-Schnitstelle als Status "OK" zurückgibt
-        $r = Invoke-WebRequest -URI "http://localhost:$MGMT/status" -UseBasicParsing
-        $res = $r.RawContent
+    try {
+    #Prüfen, ob REST-Schnitstelle als Status "OK" zurückgibt
+    $r = Invoke-WebRequest -URI "http://localhost:9999/status" -UseBasicParsing
+    $b = Invoke-WebRequest -URI "http://localhost:4443/status" -UseBasicParsing
+    $res = $r.RawContent
+    $bes = $b.RawContent
         if ($res.contains("OK")) {
             Show-Icon "success"
-            Write-Host "REST-Schnittstelle liefert Status: OK"
+            Write-Host "REST-Schnittstelle liefert Status: OK auf 9999"
         }
         else {
             Show-Icon "error"
             Write-Host "REST-Schnittstelle liefert Status: $res"
         }
+        if ($bes.contains("OK")) {
+            Show-Icon "success"
+            Write-Host "REST-Schnittstelle liefert Status: OK auf 4443"
+        }
+        else {
+            Show-Icon "error"
+            Write-Host "REST-Schnittstelle liefert Status: $bes"
+        }
        
     }
-    catch {
+    catch{
         Show-Icon "error"
-        Write-Host "REST-Schnittstelle (Port"$MGMT") konnte nicht angesprochen werden"
-        } 
-    }
+        Write-Host "REST-Schnittstelle konnte nicht angesprochen werden"
+    } 
 }
+
 
 function CheckDocPortal {
 	$ConnectPfad = Get-ItemProperty -Path "Registry::HKCU\Software\CompuGROUP\DocPortal" -Name binary -ErrorAction SilentlyContinue
@@ -487,14 +482,14 @@ function Plugin {
     # Ports auslesen und prüfen
     $pop3Port = $connect.GeneralConfiguration.pop3Port
     $smtpPort = $connect.GeneralConfiguration.smtpPort
-    $komLeClientManagementPort = $connect.GeneralConfiguration.komLeClientManagementPort
-    if ($pop3Port -and $smtpPort -and $komLeClientManagementPort) {
+    #$komLeClientManagementPort = $connect.GeneralConfiguration.komLeClientManagementPort
+    if ($pop3Port -and $smtpPort) {
         Show-Icon "success"
-        Write-Host " - Ports (POP3, SMTP, Management): $pop3Port, $smtpPort, $komLeClientManagementPort"
+        Write-Host " - Ports (POP3, SMTP): $pop3Port, $smtpPort"
     }
     else {
         Show-Icon "error"
-        Write-Warning " - Es sind nicht alle Ports (POP3, SMTP, Management) angegeben"
+        Write-Warning " - Es sind nicht alle Ports (POP3 & SMTP) angegeben"
     }
 }
 
