@@ -230,9 +230,9 @@ function RESTCheck {
     try {
     #Prüfen, ob REST-Schnitstelle als Status "OK" zurückgibt
     $r = Invoke-WebRequest -URI "http://localhost:9999/status" -UseBasicParsing
-    $b = Invoke-WebRequest -URI "http://localhost:4443/status" -UseBasicParsing
+    #$b = Invoke-WebRequest -URI "http://localhost:4443/status" -UseBasicParsing
     $res = $r.RawContent
-    $bes = $b.RawContent
+    #$bes = $b.RawContent
         if ($res.contains("OK")) {
             Show-Icon "success"
             Write-Host "REST-Schnittstelle liefert Status: OK auf 9999"
@@ -241,14 +241,14 @@ function RESTCheck {
             Show-Icon "error"
             Write-Host "REST-Schnittstelle liefert Status: $res"
         }
-        if ($bes.contains("OK")) {
-            Show-Icon "success"
-            Write-Host "REST-Schnittstelle liefert Status: OK auf 4443"
-        }
-        else {
-            Show-Icon "error"
-            Write-Host "REST-Schnittstelle liefert Status: $bes"
-        }
+        #if ($bes.contains("OK")) {
+        #    Show-Icon "success"
+        #    Write-Host "REST-Schnittstelle liefert Status: OK auf 4443"
+        #}
+        #else {
+        #    Show-Icon "error"
+        #    Write-Host "REST-Schnittstelle liefert Status: $bes"
+        #}
        
     }
     catch{
