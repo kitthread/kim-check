@@ -2,9 +2,11 @@
 powershell -command Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope CurrentUser
 powershell -command "[console]::WindowWidth=120; [console]::WindowHeight=50; [console]::BufferWidth=[console]::WindowWidth"
 
-$ports_to_check = 8995, 8465, 9999, 4443, 995, 465
+$ports_to_check_cgm = 8995, 8465, 9999, 4443 
+$ports_to_check_kbv = 4443, 995, 465
 
-$services_to_check = , "CGM_KIM_ClientModule", "kv.dox KIM Clientmodul Service"
+$services_to_check_cgm = , "CGM_KIM_ClientModule"
+$services_to_check_kbv = , "kv.dox KIM Clientmodul Service"
 
 $ms_path = $ENV:medistardir
 $sys_path = "C:\Windows\SysWOW64\sysconf.s"
@@ -14,6 +16,8 @@ $certificates_to_check = "KIM\KIM_Assist\data\kim\data\*.p12"
 $certificates_to_check2 = "KIM\KIM_Assist\data\kim\data\"
 
 $reg_key_java_path = "Registry::HKLM\SOFTWARE\WOW6432Node\CompuGROUP\Java Runtime Environment"
+$javawX86 = "C:\Program Files (x86)\CG\Java\bin\javaw.exe"
+$javawC = "C:\CG\Java\bin\javaw.exe"
 
 $kim_assist_path = "KIM\KIM_Assist\"
 $kim_assist_current_version = "KIM-Einrichtung-Assistent.jar"
@@ -197,14 +201,14 @@ function MedistarJavaPathCheck {
     }
 
     # Registry-Key auslesen
-    $MEDISTA_JAVA_PFAD = Get-ItemProperty -Path "Registry::HKLM\SOFTWARE\WOW6432Node\CompuGROUP\Java Runtime Environment" -Name CurrentPath -ErrorAction SilentlyContinue
-    if (! $MEDISTA_JAVA_PFAD) {
+    $MEDISTAR_JAVA_PFAD = Get-ItemProperty -Path "Registry::HKLM\SOFTWARE\WOW6432Node\CompuGROUP\Java Runtime Environment" -Name CurrentPath -ErrorAction SilentlyContinue
+    if (! $MEDISTAR_JAVA_PFAD) {
         Show-Icon "error"
         Write-Host "MEDISTAR-Javapfad ist nicht in Registry ($MEDISTAR_JAVA_PATH)"
         return $false
     }
 
-	$Javapfad = $MEDISTA_JAVA_PFAD.CurrentPath	
+	$Javapfad = $MEDISTAR_JAVA_PFAD.CurrentPath	
 	
 	# Prüfen ob Java-Verzeichnis existiert
 	if ( !(Test-Path -path $Javapfad) ) {
@@ -213,14 +217,23 @@ function MedistarJavaPathCheck {
 		Write-Host "      Bzw. der Registry-Schluessel muss angepasst werden: HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\CompuGROUP\Java Runtime Environment\CurrentPath"
 		return
 	}
-	
+
 	if ( $Javapfad -Match "\(x86\)" ) {
-		Show-Icon "error"
-	    Write-Host "Java-Installation falsch installiert: ($Javapfad)   -> Bitte nach (Laufwerk:\CG\ installieren)"
-	}
-	else {
-		Show-Icon "success"
-	    Write-Host "Java-Installation richtig installiert: ($Javapfad)"
+		if( Test-Path $javawX86){
+            Show-Icon "success"
+            Write-Host "Java-Installationspfad und Registry-Eintrag stimmen ueberein (x86)."
+        } else{
+            Show-Icon "error"
+            Write-Warning "Java-Installationspfad und Registry-Eintrag stimmen nicht ueberein."
+        }
+	}else {
+        if( Test-Path $javawC){
+            Show-Icon "success"
+            Write-Host "Java-Installationspfad und Registry-Eintrag stimmen ueberein (C:\)"
+        }else{
+            Show-Icon "error"
+            Write-Warning "Java-Installationspfad und Registry-Eintrag stimmen nicht ueberein."
+        }
 	}
 
 }
@@ -417,6 +430,39 @@ function Servicecheck {
     }
 }
 
+function ServicecheckKBV {
+    param(
+        $servicename
+    )
+
+    # Services abrufen, die ClientModule im Namen haben:
+    $r = Get-Service "*$servicename*"
+    if ($r.length -eq 0) {
+
+        # Kein ClientModul-Dienst gefunden => Problem
+        Show-Icon "error"
+        Write-Warning "Dienst $servicename existiert nicht"
+        return
+    }
+
+    foreach ($service in $r) {
+        # Wenn ClientModul-Dienste gefunden werden: darüber iterieren
+        $checkedServiceStatus = $service | Select-Object -ExpandProperty Status
+        $checkedServiceName = $service | Select-Object -ExpandProperty DisplayName
+
+        if ($checkedServiceStatus -eq "Running") {
+            # Dienst ist aktiv => Erfolg
+            Show-Icon "success"
+            Write-Host "Dienst $checkedServiceName ist aktiv"
+        }
+        else {
+            # Dienst ist nicht aktiv => Problem
+            Show-Icon "error"
+            Write-Warning "Dienst $checkedServiceName hat den Status: $checkedServiceStatus"
+        }
+    }
+}
+
 
 
 function Plugin {
@@ -555,7 +601,7 @@ function dbms {
     $exe = "\prg4\m42t.exe"    
     $version = (Get-Item (Join-Path -path $ms_path -Childpath $exe)).VersionInfo.ProductVersion
 
-    if ($version -ge "404.79"){
+    if ($version -ge "404.81"){
         Show-Icon "success"
         Write-Host "Medistar ist aktuell: $version"
     }else{
@@ -584,143 +630,219 @@ PrintBanner
 Write-Host ""
 Write-Host ""
 
-$inp = Read-Host -Prompt "[v]or der Installation oder [d]anach?"
+$inpt = Read-Host -Prompt "CGM KIM [c], kv.dox [k] oder Telekom [t] ?"
 
-if ($inp -eq "v"){
+if ($inpt -eq "t"){
+    
+    Write-Host ""
+    Write-Host ""
+    Show-Icon "error"
+    Write-Host "ne"
+    Write-Host ""
+    Pause
+    return
 
-   #Umgebungsvariable
-   Write-Host ""
-   Write-Host "  Umgebungsvariable/Medistar-Pfad"
-   Write-Host "  ---------------------------------"
-   GetMedistarPath
-   Write-Host ""
-   pause
-   
-   #Windowsnutzer testen
-   Write-Host ""
-   Write-Host "  administrative Rechte"
-   Write-Host "  ---------------------------------"
-   admin
-   Write-Host ""
-
-   #Medistarversion testen
-   Write-Host ""
-   Write-Host "  Medistarversion testen"
-   Write-Host "  ---------------------------------"
-   dbms
-   Write-Host ""
-
-   #KIM Einrichtungsassist jar
-   Write-Host ""
-   Write-Host "  KIM Einrichtungsassist.jar"
-   Write-Host "  ---------------------------------"
-   KimAssistInstallationCheck
-   Write-Host ""
-
-   #aktuelle CM Version
-   Write-Host ""
-   Write-Host "  KIM CM Version"
-   Write-Host "  ---------------------------------"
-   KimClientmodulInstallationCheck
-   Write-Host ""
-
-   #Check MsNet-Ordner
-   Write-Host ""
-   Write-Host "  Check MsNet-Ordner"
-   Write-Host "  ---------------------------------"
-   CheckMsNet
-   Write-Host ""
-
-   #Ports checken:
-   Write-Host ""
-   Write-Host "  Checken der Ports"
-   Write-Host "  ---------------------------------"
-   foreach ($port in $ports_to_check) {
-   Portcheck $port
-   }
-   Write-Host ""
-
-   #sysconf.s checken
-   Write-Host ""
-   Write-Host "  Checken der sysconf"
-   Write-Host "  ---------------------------------"
-   sysconf
-   Write-Host ""
-   pause
 }else{
-    #Services checken:
-    Write-Host ""
-    Write-Host "  Status Windowsdienst"
-    Write-Host "  ---------------------------------"
-    foreach ($service in $services_to_check) {
-       Servicecheck $service
-    }
-    Write-Host ""
 
-    #Ports checken:
-    Write-Host ""
-    Write-Host "  Checken der Ports"
-    Write-Host "  ---------------------------------"
-    foreach ($port in $ports_to_check) {
-    Portcheck $port
-    }
-    Write-Host ""
+    if ($inpt -eq "k"){
+   
+        Write-Host ""
+        Write-Host "  Achtung!"
+        Write-Host ""
+        Write-Host ""
+        pause
+        
+        Write-Host ""
+        Write-Host "  Es geht gleich los!"
+        Write-Host ""
+        Write-Host ""
+        pause
 
-    #Plugin checken:
-    Write-Host ""
-    Write-Host "  Connect KIM-Plugin Konfiguration"
-    Write-Host "  ---------------------------------"
-    Plugin
-    Write-Host ""
+        Write-Host ""
+        Write-Host "  Alle anschnallen!"
+        Write-Host ""
+        Write-Host ""
+        pause
 
-    #REST-Check:
-    Write-Host ""
-    Write-Host "  REST-Check"
-    Write-Host "  ---------------------------------"
-    RESTCheck
-    Write-Host ""
+        #Dienst
+        Write-Host ""
+        Write-Host "  Status Windowsdienst"
+        Write-Host "  ---------------------------------"
+        foreach ($service in $services_to_check_kbv) {
+         ServicecheckKBV $service
+        }
+        Write-Host ""
+     
+        #Ports checken:
+        Write-Host ""
+        Write-Host "  Checken der Ports"
+        Write-Host "  ---------------------------------"
+        foreach ($port in $ports_to_check_kbv) {
+        Portcheck $port
+        }
+        Write-Host ""
+     
+        #Plugin checken:
+        Write-Host ""
+        Write-Host "  Connect KIM-Plugin Konfiguration"
+        Write-Host "  ---------------------------------"
+        Plugin
+        Write-Host ""
+     
+        Write-Host ""
+        Write-Host " Info vom Autor"
+        Write-Host "  ---------------------------------"
+        Show-Icon "success"
+        Write-Host "Mehr ist erstmal nicht interessant, Fortsetzung folgt..."
+        Write-Host ""
+        Write-Host ""
+        Pause
+        Return
+     
+     }else{
+         Write-Host ""
+         $inp = Read-Host -Prompt "[v]or der Installation oder [d]anach?"
+         if ($inp -eq "v"){
+     
+             #Umgebungsvariable
+             Write-Host ""
+             Write-Host "  Umgebungsvariable/Medistar-Pfad"
+             Write-Host "  ---------------------------------"
+             GetMedistarPath
+             Write-Host ""
+             pause
+             
+             #Windowsnutzer testen
+             Write-Host ""
+             Write-Host "  administrative Rechte"
+             Write-Host "  ---------------------------------"
+             admin
+             Write-Host ""
+          
+             #Medistarversion testen
+             Write-Host ""
+             Write-Host "  Medistarversion testen"
+             Write-Host "  ---------------------------------"
+             dbms
+             Write-Host ""
+          
+             #KIM Einrichtungsassist jar
+             Write-Host ""
+             Write-Host "  KIM Einrichtungsassist.jar"
+             Write-Host "  ---------------------------------"
+             KimAssistInstallationCheck
+             Write-Host ""
+          
+             #aktuelle CM Version
+             Write-Host ""
+             Write-Host "  KIM CM Version"
+             Write-Host "  ---------------------------------"
+             KimClientmodulInstallationCheck
+             Write-Host ""
+          
+             #Check MsNet-Ordner
+             Write-Host ""
+             Write-Host "  Check MsNet-Ordner"
+             Write-Host "  ---------------------------------"
+             CheckMsNet
+             Write-Host ""
+          
+             #Ports checken:
+             Write-Host ""
+             Write-Host "  Checken der Ports"
+             Write-Host "  ---------------------------------"
+             foreach ($port in $ports_to_check_cgm) {
+             Portcheck $port
+             }
+             Write-Host ""
+          
+             #sysconf.s checken
+             Write-Host ""
+             Write-Host "  Checken der sysconf"
+             Write-Host "  ---------------------------------"
+             sysconf
+             Write-Host ""
+             pause
+          }else{
+              #Services checken:
+              Write-Host ""
+              Write-Host "  Status Windowsdienst"
+              Write-Host "  ---------------------------------"
+              foreach ($service in $services_to_check_cgm) {
+                 Servicecheck $service
+              }
+              Write-Host ""
+          
+              #Ports checken:
+              Write-Host ""
+              Write-Host "  Checken der Ports"
+              Write-Host "  ---------------------------------"
+              foreach ($port in $ports_to_check_cgm) {
+              Portcheck $port
+              }
+              Write-Host ""
+          
+              #Plugin checken:
+              Write-Host ""
+              Write-Host "  Connect KIM-Plugin Konfiguration"
+              Write-Host "  ---------------------------------"
+              Plugin
+              Write-Host ""
+          
+              #REST-Check:
+              Write-Host ""
+              Write-Host "  REST-Check"
+              Write-Host "  ---------------------------------"
+              RESTCheck
+              Write-Host ""
+          
+              #CG Java Pfad:
+              Write-Host ""
+              Write-Host "  CG Java"
+              Write-Host "  ---------------------------------"
+              MedistarJavaPathCheck
+              Write-Host ""
+          
+              #Docportal Registry-Eintrag:
+              Write-Host ""
+              Write-Host "  Docportal Registry-Eintrag"
+              Write-Host "  ---------------------------------"
+              CheckDocPortal
+              Write-Host ""
+          
+              #P12-Zertifikate:
+              Write-Host ""
+              Write-Host "  P12-Zertifikate"
+              Write-Host "  ---------------------------------"
+              MailCheck
+              Write-Host ""
+          
+              #SMCB Pin Status aus der LOG:
+              Write-Host ""
+              Write-Host "  SMC-B Pin Status"
+              Write-Host "  ---------------------------------"
+              Checkcardverification
+              Write-Host ""
+          
+              #Secret checken:
+              Write-Host ""
+              Write-Host "  Secret Datei"
+              Write-Host "  ---------------------------------"
+              Secret
+              Write-Host ""
+          
+              #FW checken:
+              Write-Host ""
+              Write-Host "  Windows Firewall"
+              Write-Host "  ---------------------------------"
+              FWCHeck
+              Write-Host ""
+          
+              pause
+          }
+     }
 
-    #CG Java Pfad:
-    Write-Host ""
-    Write-Host "  CG Java"
-    Write-Host "  ---------------------------------"
-    MedistarJavaPathCheck
-    Write-Host ""
-
-    #Docportal Registry-Eintrag:
-    Write-Host ""
-    Write-Host "  Docportal Registry-Eintrag"
-    Write-Host "  ---------------------------------"
-    CheckDocPortal
-    Write-Host ""
-
-    #P12-Zertifikate:
-    Write-Host ""
-    Write-Host "  P12-Zertifikate"
-    Write-Host "  ---------------------------------"
-    MailCheck
-    Write-Host ""
-
-    #SMCB Pin Status aus der LOG:
-    Write-Host ""
-    Write-Host "  SMC-B Pin Status"
-    Write-Host "  ---------------------------------"
-    Checkcardverification
-    Write-Host ""
-
-    #Secret checken:
-    Write-Host ""
-    Write-Host "  Secret Datei"
-    Write-Host "  ---------------------------------"
-    Secret
-    Write-Host ""
-
-    #FW checken:
-    Write-Host ""
-    Write-Host "  Windows Firewall"
-    Write-Host "  ---------------------------------"
-    FWCHeck
-    Write-Host ""
-
-    pause
 }
+
+
+
