@@ -27,6 +27,8 @@ $kim_client_path = "KIM\KIM_Clientmodul\"
 $kim_client_current_version = "KIM-CM-10.0.2-11.jar"
 $kim_client_old_version = "KIM-CM-10.0.2-10.jar"
 
+$scriptversion = "1.4"
+
 # --- Ab hier müssen keine Änderungen mehr vergenommen werden ---
 
 
@@ -74,6 +76,41 @@ function Show-Icon {
     }
     
 }
+
+function updateS{
+
+	$http_request = [System.Net.WebRequest]::Create('http://www.memski.org/1.5.html')
+    try {
+        $http_response = $http_request.GetResponse()
+
+	    $http_status = [int]$http_response.StatusCode
+
+	    If ($http_status -eq 200) {
+   		    Write-Host ""
+	    }else{
+    	    Write-Host "The Site may be down, please check!"
+	    }        
+    }
+    catch {
+        Write-Host ""
+        Write-Warning "Das Script ist nicht mehr aktuell."
+        Write-Warning "Bitte die aktuelle Version nutzen."
+        
+        $source = "https://www.memski.org/kim_check_1.5.zip"
+        $dest = $ms_path+"\archiv\" + $(Split-Path -Path $source -Leaf)
+        
+        Invoke-WebRequest -Uri $source -OutFile $dest -UseBasicParsing
+        Write-Host ""
+        Write-Host ""
+        Write-Host ""
+        Show-Icon "success"
+        Write-Host "Die Aktuelle Version wurde heruntergeladen, liegt im Ordner Archiv :)"
+
+        Pause
+        exit
+    }
+}
+
 
 function CheckUNC {
     param(
@@ -624,6 +661,10 @@ function FWCheck{
     }
 
 }
+
+
+#Script Version
+updateS
 
 #Banner anzeigen:
 PrintBanner
