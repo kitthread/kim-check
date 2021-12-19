@@ -24,10 +24,10 @@ $kim_assist_current_version = "KIM-Einrichtung-Assistent.jar"
 $kim_assist_old_version = "KIM-Einrichtung-Assistent-1.0.14.jar"
 
 $kim_client_path = "KIM\KIM_Clientmodul\"
-$kim_client_current_version = "KIM-CM-10.0.2-11.jar"
-$kim_client_old_version = "KIM-CM-10.0.2-10.jar"
+$kim_client_current_version = "KIM-CM-10.0.2-13.jar"
+$kim_client_old_version = "KIM-CM-10.0.2-11.jar"
 
-$scriptversion = "1.4"
+$scriptversion = "1.6" # to use func updateS uncomment line 705
 
 # --- Ab hier müssen keine Änderungen mehr vergenommen werden ---
 
@@ -79,7 +79,7 @@ function Show-Icon {
 
 function updateS{
 
-	$http_request = [System.Net.WebRequest]::Create('http://www.memski.org/1.5.html')
+	$http_request = [System.Net.WebRequest]::Create('http://www.memski.org/1.6.html')
     try {
         $http_response = $http_request.GetResponse()
 
@@ -96,7 +96,7 @@ function updateS{
         Write-Warning "Das Script ist nicht mehr aktuell."
         Write-Warning "Bitte die aktuelle Version nutzen."
         
-        $source = "https://www.memski.org/kim_check_1.5.zip"
+        $source = "https://www.memski.org/kim_check_1.6.zip"
         $dest = $ms_path+"\archiv\" + $(Split-Path -Path $source -Leaf)
         
         Invoke-WebRequest -Uri $source -OutFile $dest -UseBasicParsing
@@ -574,6 +574,30 @@ function Plugin {
         Show-Icon "error"
         Write-Warning " - Es sind nicht alle Ports (POP3 & SMTP) angegeben"
     }
+
+    # Zertifikatspfad
+    $certPath = $connect.GeneralConfiguration.ldapsCertificatePath
+
+    if($certPath) {
+        Show-Icon "success"
+        Write-Host "Zertifikatspfad: $certPath"
+    }
+    else{
+        Show-Icon "error"
+        Write-Warning "Es ist kein Zertifikat hinterlegt"
+    }
+
+    # Zertifikatskennwort
+    $certpass = $connect.GeneralConfiguration.ldapsCertificatePassword
+
+    if($certpass){
+        Show-Icon "success"
+        Write-Host "verschluesseltes Zertifikatskennwort: $certpass"
+    }
+    else{
+        Show-Icon "error"
+        Write-Warning "Es ist kein Zertifikatskennwort hinterlegt"
+    }
 }
 
 function Secret {
@@ -647,6 +671,20 @@ function dbms {
     }
 }
 
+function connect {
+
+    $connect = "\prg4\connect\connect.exe"
+    $cVersion = (Get-item (Join-Path -path $ms_path -Childpath $connect)).VersionInfo.ProductVersion
+
+    if ($cVersion -ge "2.1.9.0"){
+        Show-Icon "success"
+        Write-Host "Connect Version: $cVersion"
+    }else{
+        Show-Icon "error"
+        Write-Warning "Connect ist nicht aktuell: $cVersion"
+    }
+}
+
 function FWCheck{
 
     $com = powershell Get-NetFirewallRule -Displayname *KIM | select DisplayName, Direction, Enabled, PrimaryStatus
@@ -664,7 +702,7 @@ function FWCheck{
 
 
 #Script Version
-updateS
+#updateS
 
 #Banner anzeigen:
 PrintBanner
@@ -722,6 +760,13 @@ if ($inpt -eq "t"){
         Portcheck $port
         }
         Write-Host ""
+
+        #Connect Version:
+        Write-Host ""
+        Write-Host "  Connect Version"
+        Write-Host "  ---------------------------------"
+        connect
+        Write-Host ""
      
         #Plugin checken:
         Write-Host ""
@@ -734,7 +779,7 @@ if ($inpt -eq "t"){
         Write-Host " Info vom Autor"
         Write-Host "  ---------------------------------"
         Show-Icon "success"
-        Write-Host "Mehr ist erstmal nicht interessant, Fortsetzung folgt..."
+        Write-Host "Mehr ist erstmal nicht interessant..."
         Write-Host ""
         Write-Host ""
         Pause
@@ -821,6 +866,13 @@ if ($inpt -eq "t"){
               foreach ($port in $ports_to_check_cgm) {
               Portcheck $port
               }
+              Write-Host ""
+
+              #Connect Version:
+              Write-Host ""
+              Write-Host "  Connect Version"
+              Write-Host "  ---------------------------------"
+              connect
               Write-Host ""
           
               #Plugin checken:
