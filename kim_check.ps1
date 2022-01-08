@@ -24,10 +24,10 @@ $kim_assist_current_version = "KIM-Einrichtung-Assistent.jar"
 $kim_assist_old_version = "KIM-Einrichtung-Assistent-1.0.14.jar"
 
 $kim_client_path = "KIM\KIM_Clientmodul\"
-$kim_client_current_version = "KIM-CM-10.0.2-13.jar"
-$kim_client_old_version = "KIM-CM-10.0.2-11.jar"
+$kim_client_current_version = "KIM-CM-10.0.2-14.jar"
+$kim_client_old_version = "KIM-CM-10.0.2-13.jar"
 
-$scriptversion = "1.6" # to use func updateS uncomment line 705
+$scriptversion = "1.6.1" # to use func updateS uncomment line 705
 
 # --- Ab hier müssen keine Änderungen mehr vergenommen werden ---
 
@@ -79,7 +79,7 @@ function Show-Icon {
 
 function updateS{
 
-	$http_request = [System.Net.WebRequest]::Create('http://www.memski.org/1.6.html')
+	$http_request = [System.Net.WebRequest]::Create('https://www.memski.org/1.6.1.html')
     try {
         $http_response = $http_request.GetResponse()
 
@@ -96,7 +96,7 @@ function updateS{
         Write-Warning "Das Script ist nicht mehr aktuell."
         Write-Warning "Bitte die aktuelle Version nutzen."
         
-        $source = "https://www.memski.org/kim_check_1.6.zip"
+        $source = "https://www.memski.org/kim_check_1.6.1.zip"
         $dest = $ms_path+"\archiv\" + $(Split-Path -Path $source -Leaf)
         
         Invoke-WebRequest -Uri $source -OutFile $dest -UseBasicParsing
