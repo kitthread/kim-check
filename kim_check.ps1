@@ -11,6 +11,8 @@ $services_to_check_kbv = , "kv.dox KIM Clientmodul Service"
 $ms_path = $ENV:medistardir
 $sys_path = "C:\Windows\SysWOW64\sysconf.s"
 
+$ms_version = "404.82"
+$connect_version = "2.1.9.0"
 
 $certificates_to_check = "KIM\KIM_Assist\data\kim\data\*.p12"
 $certificates_to_check2 = "KIM\KIM_Assist\data\kim\data\"
@@ -27,7 +29,7 @@ $kim_client_path = "KIM\KIM_Clientmodul\"
 $kim_client_current_version = "KIM-CM-10.0.2-14.jar"
 $kim_client_old_version = "KIM-CM-10.0.2-13.jar"
 
-$scriptversion = "1.6.1" # to use func updateS uncomment line 705
+$scriptversion = "1.7" # to use func updateS uncomment line 705
 
 # --- Ab hier müssen keine Änderungen mehr vergenommen werden ---
 
@@ -79,7 +81,7 @@ function Show-Icon {
 
 function updateS{
 
-	$http_request = [System.Net.WebRequest]::Create('https://www.memski.org/1.6.1.html')
+	$http_request = [System.Net.WebRequest]::Create('https://www.memski.org/1.7.html')
     try {
         $http_response = $http_request.GetResponse()
 
@@ -96,7 +98,7 @@ function updateS{
         Write-Warning "Das Script ist nicht mehr aktuell."
         Write-Warning "Bitte die aktuelle Version nutzen."
         
-        $source = "https://www.memski.org/kim_check_1.6.1.zip"
+        $source = "https://www.memski.org/kim_check_1.7.zip"
         $dest = $ms_path+"\archiv\" + $(Split-Path -Path $source -Leaf)
         
         Invoke-WebRequest -Uri $source -OutFile $dest -UseBasicParsing
@@ -277,29 +279,33 @@ function MedistarJavaPathCheck {
 
 function RESTCheck {
     
+    $confprop = "KIM\KIM_Clientmodul\conf\cm-config.properties"
+    $confPath = Join-Path -path $ms_path -ChildPath $confprop
+    $portmgmt = ""
+
+    if (! (Test-Path -path $confPath)){
+        Show-Icon "error"
+        Write-Host "Keine cm-config.properties gefunden: $confPath"
+    }
+
+    if ((Get-Content $confPath) -Match "PORT_MGMT=4443"){
+        $portmgmt = 4443
+    }else{
+        $portmgmt = 9999
+    }
+
     try {
     #Prüfen, ob REST-Schnitstelle als Status "OK" zurückgibt
-    $r = Invoke-WebRequest -URI "http://localhost:9999/status" -UseBasicParsing
-    #$b = Invoke-WebRequest -URI "http://localhost:4443/status" -UseBasicParsing
+    $r = Invoke-WebRequest -URI "http://localhost:$portmgmt/status" -UseBasicParsing
     $res = $r.RawContent
-    #$bes = $b.RawContent
         if ($res.contains("OK")) {
             Show-Icon "success"
-            Write-Host "REST-Schnittstelle liefert Status: OK auf 9999"
+            Write-Host "REST-Schnittstelle liefert Status: OK auf $portmgmt"
         }
         else {
             Show-Icon "error"
             Write-Host "REST-Schnittstelle liefert Status: $res"
-        }
-        #if ($bes.contains("OK")) {
-        #    Show-Icon "success"
-        #    Write-Host "REST-Schnittstelle liefert Status: OK auf 4443"
-        #}
-        #else {
-        #    Show-Icon "error"
-        #    Write-Host "REST-Schnittstelle liefert Status: $bes"
-        #}
-       
+        }       
     }
     catch{
         Show-Icon "error"
@@ -662,7 +668,7 @@ function dbms {
     $exe = "\prg4\m42t.exe"    
     $version = (Get-Item (Join-Path -path $ms_path -Childpath $exe)).VersionInfo.ProductVersion
 
-    if ($version -ge "404.81"){
+    if ($version -ge $ms_version){
         Show-Icon "success"
         Write-Host "Medistar ist aktuell: $version"
     }else{
@@ -676,7 +682,7 @@ function connect {
     $connect = "\prg4\connect\connect.exe"
     $cVersion = (Get-item (Join-Path -path $ms_path -Childpath $connect)).VersionInfo.ProductVersion
 
-    if ($cVersion -ge "2.1.9.0"){
+    if ($cVersion -ge $connect_version){
         Show-Icon "success"
         Write-Host "Connect Version: $cVersion"
     }else{
@@ -710,6 +716,11 @@ Write-Host ""
 Write-Host ""
 
 $inpt = Read-Host -Prompt "CGM KIM [c], kv.dox [k] oder Telekom [t] ?"
+
+if ($inpt -eq "s"){
+    Start-Process "https://www.memski.org/snake.html"
+    return
+}
 
 if ($inpt -eq "t"){
     
