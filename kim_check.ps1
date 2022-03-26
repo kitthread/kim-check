@@ -11,8 +11,8 @@ $services_to_check_kbv = , "kv.dox KIM Clientmodul Service"
 $ms_path = $ENV:medistardir
 $sys_path = "C:\Windows\SysWOW64\sysconf.s"
 
-$ms_version = "404.82"
-$connect_version = "2.1.9.0"
+$ms_version = "404.84"
+$connect_version = "2.1.9.3"
 
 $certificates_to_check = "KIM\KIM_Assist\data\kim\data\*.p12"
 $certificates_to_check2 = "KIM\KIM_Assist\data\kim\data\"
@@ -706,6 +706,21 @@ function FWCheck{
 
 }
 
+function routing{
+
+    $route = Get-CimInstance -Class Win32_IP4PersistedRouteTable -Filter 'Caption LIKE "100.10%"' | Format-Table -Property Name,Mask,NextHop -AutoSize
+
+    if (!$route){
+        Show-Icon "error"
+        Write-Warning "Keine Routen gefunden, IEGK prüfen"
+    }else{
+        Show-Icon "success"
+        Write-Host "Routen gefunden:" 
+        $route
+    }
+}
+
+
 
 #Script Version
 #updateS
@@ -731,221 +746,213 @@ if ($inpt -eq "t"){
     Write-Host ""
     Pause
     return
+}
 
-}else{
-
-    if ($inpt -eq "k"){
+if ($inpt -eq "k"){
    
-        Write-Host ""
-        Write-Host "  Achtung!"
-        Write-Host ""
-        Write-Host ""
-        pause
+    Write-Host ""
+    Write-Host "  Achtung!"
+    Write-Host ""
+    Write-Host ""
+    pause
         
-        Write-Host ""
-        Write-Host "  Es geht gleich los!"
-        Write-Host ""
-        Write-Host ""
-        pause
+    Write-Host ""
+    Write-Host "  Es geht gleich los!"
+    Write-Host ""
+    Write-Host ""
+    pause
 
-        Write-Host ""
-        Write-Host "  Alle anschnallen!"
-        Write-Host ""
-        Write-Host ""
-        pause
+    Write-Host ""
+    Write-Host "  Alle anschnallen!"
+    Write-Host ""
+    Write-Host ""
+    pause
 
-        #Dienst
-        Write-Host ""
-        Write-Host "  Status Windowsdienst"
-        Write-Host "  ---------------------------------"
-        foreach ($service in $services_to_check_kbv) {
-         ServicecheckKBV $service
-        }
-        Write-Host ""
+    #Dienst
+    Write-Host ""
+    Write-Host "  Status Windowsdienst"
+    Write-Host "  ---------------------------------"
+    foreach ($service in $services_to_check_kbv) {
+    ServicecheckKBV $service
+    }
+    Write-Host ""
      
-        #Ports checken:
-        Write-Host ""
-        Write-Host "  Checken der Ports"
-        Write-Host "  ---------------------------------"
-        foreach ($port in $ports_to_check_kbv) {
-        Portcheck $port
-        }
-        Write-Host ""
+    #Ports checken:
+    Write-Host ""
+    Write-Host "  Checken der Ports"
+    Write-Host "  ---------------------------------"
+    foreach ($port in $ports_to_check_kbv) {
+    Portcheck $port
+    }
+    Write-Host ""
 
-        #Connect Version:
-        Write-Host ""
-        Write-Host "  Connect Version"
-        Write-Host "  ---------------------------------"
-        connect
-        Write-Host ""
+    #Connect Version:
+    Write-Host ""
+    Write-Host "  Connect Version"
+    Write-Host "  ---------------------------------"
+    connect
+    Write-Host ""
      
-        #Plugin checken:
-        Write-Host ""
-        Write-Host "  Connect KIM-Plugin Konfiguration"
-        Write-Host "  ---------------------------------"
-        Plugin
-        Write-Host ""
+    #Plugin checken:
+    Write-Host ""
+    Write-Host "  Connect KIM-Plugin Konfiguration"
+    Write-Host "  ---------------------------------"
+    Plugin
+    Write-Host ""
      
-        Write-Host ""
-        Write-Host " Info vom Autor"
-        Write-Host "  ---------------------------------"
-        Show-Icon "success"
-        Write-Host "Mehr ist erstmal nicht interessant..."
-        Write-Host ""
-        Write-Host ""
-        Pause
-        Return
+    Write-Host ""
+    Write-Host " Info vom Autor"
+    Write-Host "  ---------------------------------"
+    Show-Icon "success"
+    Write-Host "Mehr ist erstmal nicht interessant..."
+    Write-Host ""
+    Write-Host ""
+    Pause
+    Return
+}
+
+if ($inpt -eq "c"){
      
-     }else{
-         Write-Host ""
-         $inp = Read-Host -Prompt "[v]or der Installation oder [d]anach?"
-         if ($inp -eq "v"){
-     
-             #Umgebungsvariable
-             Write-Host ""
-             Write-Host "  Umgebungsvariable/Medistar-Pfad"
-             Write-Host "  ---------------------------------"
-             GetMedistarPath
-             Write-Host ""
-             pause
+    #Umgebungsvariable
+    Write-Host ""
+    Write-Host "  Umgebungsvariable/Medistar-Pfad"
+    Write-Host "  ---------------------------------"
+    GetMedistarPath
+    Write-Host ""
+    pause
              
-             #Windowsnutzer testen
-             Write-Host ""
-             Write-Host "  administrative Rechte"
-             Write-Host "  ---------------------------------"
-             admin
-             Write-Host ""
+    #Windowsnutzer testen
+    Write-Host ""
+    Write-Host "  administrative Rechte"
+    Write-Host "  ---------------------------------"
+    admin
+    Write-Host ""
           
-             #Medistarversion testen
-             Write-Host ""
-             Write-Host "  Medistarversion testen"
-             Write-Host "  ---------------------------------"
-             dbms
-             Write-Host ""
+    #Medistarversion testen
+    Write-Host ""
+    Write-Host "  Medistarversion testen"
+    Write-Host "  ---------------------------------"
+    dbms
+    Write-Host ""
           
-             #KIM Einrichtungsassist jar
-             Write-Host ""
-             Write-Host "  KIM Einrichtungsassist.jar"
-             Write-Host "  ---------------------------------"
-             KimAssistInstallationCheck
-             Write-Host ""
+    #KIM Einrichtungsassist jar
+    Write-Host ""
+    Write-Host "  KIM Einrichtungsassist.jar"
+    Write-Host "  ---------------------------------"
+    KimAssistInstallationCheck
+    Write-Host ""
           
-             #aktuelle CM Version
-             Write-Host ""
-             Write-Host "  KIM CM Version"
-             Write-Host "  ---------------------------------"
-             KimClientmodulInstallationCheck
-             Write-Host ""
+    #aktuelle CM Version
+    Write-Host ""
+    Write-Host "  KIM CM Version"
+    Write-Host "  ---------------------------------"
+    KimClientmodulInstallationCheck
+    Write-Host ""
+         
+    #Check MsNet-Ordner
+    Write-Host ""
+    Write-Host "  Check MsNet-Ordner"
+    Write-Host "  ---------------------------------"
+    CheckMsNet
+    Write-Host ""
           
-             #Check MsNet-Ordner
-             Write-Host ""
-             Write-Host "  Check MsNet-Ordner"
-             Write-Host "  ---------------------------------"
-             CheckMsNet
-             Write-Host ""
+    #Ports checken:
+    Write-Host ""
+    Write-Host "  Checken der Ports"
+    Write-Host "  ---------------------------------"
+    foreach ($port in $ports_to_check_cgm) {
+        Portcheck $port
+    }
+    Write-Host ""
           
-             #Ports checken:
-             Write-Host ""
-             Write-Host "  Checken der Ports"
-             Write-Host "  ---------------------------------"
-             foreach ($port in $ports_to_check_cgm) {
-             Portcheck $port
-             }
-             Write-Host ""
-          
-             #sysconf.s checken
-             Write-Host ""
-             Write-Host "  Checken der sysconf"
-             Write-Host "  ---------------------------------"
-             sysconf
-             Write-Host ""
-             pause
-          }else{
-              #Services checken:
-              Write-Host ""
-              Write-Host "  Status Windowsdienst"
-              Write-Host "  ---------------------------------"
-              foreach ($service in $services_to_check_cgm) {
-                 Servicecheck $service
-              }
-              Write-Host ""
-          
-              #Ports checken:
-              Write-Host ""
-              Write-Host "  Checken der Ports"
-              Write-Host "  ---------------------------------"
-              foreach ($port in $ports_to_check_cgm) {
-              Portcheck $port
-              }
-              Write-Host ""
+    #sysconf.s checken
+    Write-Host ""
+    Write-Host "  Checken der sysconf"
+    Write-Host "  ---------------------------------"
+    sysconf
+    Write-Host ""
+             
+    #routen
+    Write-Host ""
+    Write-Host "  Checken der Routen"
+    Write-Host "  ---------------------------------"
+    routing
+    Write-Host ""
+    
+    #Services checken:
+    Write-Host ""
+    Write-Host "  Status Windowsdienst"
+    Write-Host "  ---------------------------------"
+    foreach ($service in $services_to_check_cgm) {
+        Servicecheck $service
+    }
+    Write-Host ""
 
-              #Connect Version:
-              Write-Host ""
-              Write-Host "  Connect Version"
-              Write-Host "  ---------------------------------"
-              connect
-              Write-Host ""
+    #Connect Version:
+    Write-Host ""
+    Write-Host "  Connect Version"
+    Write-Host "  ---------------------------------"
+    connect
+    Write-Host ""
           
-              #Plugin checken:
-              Write-Host ""
-              Write-Host "  Connect KIM-Plugin Konfiguration"
-              Write-Host "  ---------------------------------"
-              Plugin
-              Write-Host ""
+    #Plugin checken:
+    Write-Host ""
+    Write-Host "  Connect KIM-Plugin Konfiguration"
+    Write-Host "  ---------------------------------"
+    Plugin
+    Write-Host ""
           
-              #REST-Check:
-              Write-Host ""
-              Write-Host "  REST-Check"
-              Write-Host "  ---------------------------------"
-              RESTCheck
-              Write-Host ""
+    #REST-Check:
+    Write-Host ""
+    Write-Host "  REST-Check"
+    Write-Host "  ---------------------------------"
+    RESTCheck
+    Write-Host ""
           
-              #CG Java Pfad:
-              Write-Host ""
-              Write-Host "  CG Java"
-              Write-Host "  ---------------------------------"
-              MedistarJavaPathCheck
-              Write-Host ""
+    #CG Java Pfad:
+    Write-Host ""
+    Write-Host "  CG Java"
+    Write-Host "  ---------------------------------"
+    MedistarJavaPathCheck
+    Write-Host ""
           
-              #Docportal Registry-Eintrag:
-              Write-Host ""
-              Write-Host "  Docportal Registry-Eintrag"
-              Write-Host "  ---------------------------------"
-              CheckDocPortal
-              Write-Host ""
+    #Docportal Registry-Eintrag:
+    Write-Host ""
+    Write-Host "  Docportal Registry-Eintrag"
+    Write-Host "  ---------------------------------"
+    CheckDocPortal
+    Write-Host ""
           
-              #P12-Zertifikate:
-              Write-Host ""
-              Write-Host "  P12-Zertifikate"
-              Write-Host "  ---------------------------------"
-              MailCheck
-              Write-Host ""
+    #P12-Zertifikate:
+    Write-Host ""
+    Write-Host "  P12-Zertifikate"
+    Write-Host "  ---------------------------------"
+    MailCheck
+    Write-Host ""
           
-              #SMCB Pin Status aus der LOG:
-              Write-Host ""
-              Write-Host "  SMC-B Pin Status"
-              Write-Host "  ---------------------------------"
-              Checkcardverification
-              Write-Host ""
+    #SMCB Pin Status aus der LOG:
+    Write-Host ""
+    Write-Host "  SMC-B Pin Status"
+    Write-Host "  ---------------------------------"
+    Checkcardverification
+    Write-Host ""
           
-              #Secret checken:
-              Write-Host ""
-              Write-Host "  Secret Datei"
-              Write-Host "  ---------------------------------"
-              Secret
-              Write-Host ""
+    #Secret checken:
+    Write-Host ""
+    Write-Host "  Secret Datei"
+    Write-Host "  ---------------------------------"
+    Secret
+    Write-Host ""
           
-              #FW checken:
-              Write-Host ""
-              Write-Host "  Windows Firewall"
-              Write-Host "  ---------------------------------"
-              FWCHeck
-              Write-Host ""
-          
-              pause
-          }
-     }
+    #FW checken:
+    Write-Host ""
+    Write-Host "  Windows Firewall"
+    Write-Host "  ---------------------------------"
+    FWCHeck
+    Write-Host ""
 
+    pause
+    Return
 }
 
 
