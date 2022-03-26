@@ -29,7 +29,7 @@ $kim_client_path = "KIM\KIM_Clientmodul\"
 $kim_client_current_version = "KIM-CM-10.0.2-14.jar"
 $kim_client_old_version = "KIM-CM-10.0.2-13.jar"
 
-$scriptversion = "1.7" # to use func updateS uncomment line 705
+$scriptversion = "1.8" # to use func updateS uncomment line 705
 
 # --- Ab hier müssen keine Änderungen mehr vergenommen werden ---
 
