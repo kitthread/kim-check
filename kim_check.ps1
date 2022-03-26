@@ -81,7 +81,7 @@ function Show-Icon {
 
 function updateS{
 
-	$http_request = [System.Net.WebRequest]::Create('https://www.memski.org/1.7.html')
+	$http_request = [System.Net.WebRequest]::Create('https://www.memski.org/1.8.html')
     try {
         $http_response = $http_request.GetResponse()
 
@@ -98,7 +98,7 @@ function updateS{
         Write-Warning "Das Script ist nicht mehr aktuell."
         Write-Warning "Bitte die aktuelle Version nutzen."
         
-        $source = "https://www.memski.org/kim_check_1.7.zip"
+        $source = "https://www.memski.org/kim_check_1.8.zip"
         $dest = $ms_path+"\archiv\" + $(Split-Path -Path $source -Leaf)
         
         Invoke-WebRequest -Uri $source -OutFile $dest -UseBasicParsing
