@@ -12,7 +12,7 @@ $ms_path = $ENV:medistardir
 $sys_path = "C:\Windows\SysWOW64\sysconf.s"
 
 $ms_version = "404.84"
-$connect_version = "2.1.9.3"
+$connect_version = "2.2.0.0"
 
 $certificates_to_check = "KIM\KIM_Assist\data\kim\data\*.p12"
 $certificates_to_check2 = "KIM\KIM_Assist\data\kim\data\"
@@ -29,7 +29,7 @@ $kim_client_path = "KIM\KIM_Clientmodul\"
 $kim_client_current_version = "KIM-CM-10.0.2-14.jar"
 $kim_client_old_version = "KIM-CM-10.0.2-13.jar"
 
-$scriptversion = "1.7" # to use func updateS uncomment line 705
+$scriptversion = "1.8" # to use func updateS uncomment line 705
 
 # --- Ab hier müssen keine Änderungen mehr vergenommen werden ---
 
@@ -81,7 +81,7 @@ function Show-Icon {
 
 function updateS{
 
-	$http_request = [System.Net.WebRequest]::Create('https://www.memski.org/1.7.html')
+	$http_request = [System.Net.WebRequest]::Create('https://www.memski.org/1.8.html')
     try {
         $http_response = $http_request.GetResponse()
 
@@ -98,7 +98,7 @@ function updateS{
         Write-Warning "Das Script ist nicht mehr aktuell."
         Write-Warning "Bitte die aktuelle Version nutzen."
         
-        $source = "https://www.memski.org/kim_check_1.7.zip"
+        $source = "https://www.memski.org/kim_check_1.8.zip"
         $dest = $ms_path+"\archiv\" + $(Split-Path -Path $source -Leaf)
         
         Invoke-WebRequest -Uri $source -OutFile $dest -UseBasicParsing
