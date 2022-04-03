@@ -12,7 +12,7 @@ $ms_path = $ENV:medistardir
 $sys_path = "C:\Windows\SysWOW64\sysconf.s"
 
 $ms_version = "404.84"
-$connect_version = "2.1.9.3"
+$connect_version = "2.2.0.0"
 
 $certificates_to_check = "KIM\KIM_Assist\data\kim\data\*.p12"
 $certificates_to_check2 = "KIM\KIM_Assist\data\kim\data\"
