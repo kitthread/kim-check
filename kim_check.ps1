@@ -11,8 +11,8 @@ $services_to_check_kbv = , "kv.dox KIM Clientmodul Service"
 $ms_path = $ENV:medistardir
 $sys_path = "C:\Windows\SysWOW64\sysconf.s"
 
-$ms_version = "404.84"
-$connect_version = "2.2.0.0"
+$ms_version = "404.85"
+$connect_version = "2.2.0.1"
 
 $certificates_to_check = "KIM\KIM_Assist\data\kim\data\*.p12"
 $certificates_to_check2 = "KIM\KIM_Assist\data\kim\data\"
@@ -29,7 +29,7 @@ $kim_client_path = "KIM\KIM_Clientmodul\"
 $kim_client_current_version = "KIM-CM-10.0.2-14.jar"
 $kim_client_old_version = "KIM-CM-10.0.2-13.jar"
 
-$scriptversion = "1.8" # to use func updateS uncomment line 705
+$scriptversion = "1.9" # to use func updateS uncomment line 731
 
 # --- Ab hier müssen keine Änderungen mehr vergenommen werden ---
 
@@ -81,7 +81,7 @@ function Show-Icon {
 
 function updateS{
 
-	$http_request = [System.Net.WebRequest]::Create('https://www.memski.org/1.8.html')
+	$http_request = [System.Net.WebRequest]::Create('https://www.memski.org/1.9.html')
     try {
         $http_response = $http_request.GetResponse()
 
@@ -98,7 +98,7 @@ function updateS{
         Write-Warning "Das Script ist nicht mehr aktuell."
         Write-Warning "Bitte die aktuelle Version nutzen."
         
-        $source = "https://www.memski.org/kim_check_1.8.zip"
+        $source = "https://www.memski.org/kim_check_1.9.zip"
         $dest = $ms_path+"\archiv\" + $(Split-Path -Path $source -Leaf)
         
         Invoke-WebRequest -Uri $source -OutFile $dest -UseBasicParsing
@@ -351,10 +351,15 @@ function GetMedistarPath {
         return #$false
     }
 	
-	Show-Icon "success"
-	Write-Host "Medistar-Umgebungsvariable gefunden: $Medistar_Path"
-
-	#return $Medistar_Path
+    if ($Medistar_Path.Substring(0, 2) -eq "\\"){
+        Show-Icon "error"
+        Write-Warning "Den UNC-Pfad bitte korrigieren: $Medistar_Path"
+        pause
+        exit
+    }else{
+        Show-Icon "success"
+        Write-Host "Medistar-Umgebungsvariable gefunden: $Medistar_Path"
+    }
 }
 
 function CheckMsNet {	
@@ -590,7 +595,7 @@ function Plugin {
     }
     else{
         Show-Icon "error"
-        Write-Warning "Es ist kein Zertifikat hinterlegt"
+        Write-Warning "INFO: Es ist kein Zertifikat hinterlegt"
     }
 
     # Zertifikatskennwort
@@ -602,7 +607,7 @@ function Plugin {
     }
     else{
         Show-Icon "error"
-        Write-Warning "Es ist kein Zertifikatskennwort hinterlegt"
+        Write-Warning "INFO: Es ist kein Zertifikatskennwort hinterlegt"
     }
 }
 
@@ -712,7 +717,7 @@ function routing{
 
     if (!$route){
         Show-Icon "error"
-        Write-Warning "Keine Routen gefunden, IEGK prüfen"
+        Write-Warning "Keine Routen gefunden, IEGK pruefen"
     }else{
         Show-Icon "success"
         Write-Host "Routen gefunden:" 
@@ -730,19 +735,19 @@ PrintBanner
 Write-Host ""
 Write-Host ""
 
-$inpt = Read-Host -Prompt "CGM KIM [c], kv.dox [k] oder Telekom [t] ?"
+$inpt = Read-Host -Prompt "CGM KIM [c], kv.dox [k] oder KIM 1.5 [a] ?"
 
 if ($inpt -eq "s"){
     Start-Process "https://www.memski.org/snake.html"
     return
 }
 
-if ($inpt -eq "t"){
+if ($inpt -eq "a"){
     
     Write-Host ""
     Write-Host ""
     Show-Icon "error"
-    Write-Host "ne"
+    Write-Host "//TODO -> REST API requests einbauen"
     Write-Host ""
     Pause
     return
@@ -950,7 +955,21 @@ if ($inpt -eq "c"){
     Write-Host "  ---------------------------------"
     FWCHeck
     Write-Host ""
+    Write-Host ""
+    Write-Host ""
 
+    if(!$checkedServiceStatus -eq "Running"){
+        Show-Icon "error"
+        $inpL = Read-Host -Prompt "Der Dienst laeuft nicht! [L] fuer die Log-Datei, [Enter] zum ueberspringen "
+        if($inpL -eq "l"){
+            $fehlerlog = "KIM\KIM_Clientmodul\logs\cm.fehler.log"
+            $fpath = Join-Path -path $ms_path -ChildPath $fehlerlog
+            Invoke-Item $fpath
+        }else{
+            exit
+        }
+    }
+    
     pause
     Return
 }
