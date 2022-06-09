@@ -958,21 +958,6 @@ if ($inpt -eq "c"){
     Write-Host ""
     Write-Host ""
 
-    if(!$checkedServiceStatus -eq "Running"){
-        Show-Icon "error"
-        $inpL = Read-Host -Prompt "Der Dienst laeuft nicht! [L] fuer die Log-Datei, [Enter] zum ueberspringen "
-        if($inpL -eq "l"){
-            $fehlerlog = "KIM\KIM_Clientmodul\logs\cm.fehler.log"
-            $fpath = Join-Path -path $ms_path -ChildPath $fehlerlog
-            Invoke-Item $fpath
-        }else{
-            exit
-        }
-    }
-    
     pause
     Return
 }
-
-
-
