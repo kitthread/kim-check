@@ -10,6 +10,7 @@ $services_to_check_kbv = , "kv.dox KIM Clientmodul Service"
 
 $ms_path = $ENV:medistardir
 $sys_path = "C:\Windows\SysWOW64\sysconf.s"
+$appdata = $ENV:APPDATA
 
 $ms_version = "404.85"
 $connect_version = "2.2.0.1"
@@ -26,10 +27,10 @@ $kim_assist_current_version = "KIM-Einrichtung-Assistent.jar"
 $kim_assist_old_version = "KIM-Einrichtung-Assistent-1.0.14.jar"
 
 $kim_client_path = "KIM\KIM_Clientmodul\"
-$kim_client_current_version = "KIM-CM-10.0.2-14.jar"
-$kim_client_old_version = "KIM-CM-10.0.2-13.jar"
+$kim_client_current_version = "KIM-CM-10.0.2-15.jar"
+$kim_client_old_version = "KIM-CM-10.0.2-14.jar"
 
-$scriptversion = "1.9" # to use func updateS uncomment line 731
+$scriptversion = "2.0" # to use func updateS uncomment line 750
 
 # --- Ab hier müssen keine Änderungen mehr vergenommen werden ---
 
@@ -81,7 +82,7 @@ function Show-Icon {
 
 function updateS{
 
-	$http_request = [System.Net.WebRequest]::Create('https://www.memski.org/1.9.html')
+	$http_request = [System.Net.WebRequest]::Create('https://www.memski.org/2.0.html')
     try {
         $http_response = $http_request.GetResponse()
 
@@ -98,7 +99,7 @@ function updateS{
         Write-Warning "Das Script ist nicht mehr aktuell."
         Write-Warning "Bitte die aktuelle Version nutzen."
         
-        $source = "https://www.memski.org/kim_check_1.9.zip"
+        $source = "https://www.memski.org/kim_check_2.0s.zip"
         $dest = $ms_path+"\archiv\" + $(Split-Path -Path $source -Leaf)
         
         Invoke-WebRequest -Uri $source -OutFile $dest -UseBasicParsing
@@ -215,7 +216,10 @@ function KimClientmodulInstallationCheck {
 	$client_cur_version = Join-Path -path $commonpath -ChildPath $kim_client_current_version
 	if (! (Test-Path -path $client_cur_version) ) {
 		Show-Icon "error"
-        Write-Host "Keine aktuelle KIM Clientmodul Version gefunden: $client_cur_version"
+        Write-Warning "Keine aktuelle KIM Clientmodul Version gefunden:"
+        Show-Icon "error"
+        Write-Warning "$client_cur_version"
+
 	} else {
 		Show-Icon "success"
         Write-Host "Aktuelle KIM Clientmodul Version gefunden: $client_cur_version"
@@ -225,7 +229,9 @@ function KimClientmodulInstallationCheck {
     $client_old_version = Join-Path -path $commonpath -ChildPath $kim_client_old_version
 	if ( (Test-Path -path $client_old_version) ) {
 		Show-Icon "error"
-        Write-Host "Alte KIM Clientmodul Version gefunden, bitte loeschen: $client_old_version"
+        Write-Warning "Alte KIM Clientmodul Version gefunden, bitte loeschen:"
+        Show-Icon "error"
+        Write-Warning "$client_old_version"
 	}
 }
 
@@ -285,7 +291,7 @@ function RESTCheck {
 
     if (! (Test-Path -path $confPath)){
         Show-Icon "error"
-        Write-Host "Keine cm-config.properties gefunden: $confPath"
+        Write-Warning "Keine cm-config.properties gefunden: $confPath"
     }
 
     if ((Get-Content $confPath) -Match "PORT_MGMT=4443"){
@@ -309,7 +315,7 @@ function RESTCheck {
     }
     catch{
         Show-Icon "error"
-        Write-Host "REST-Schnittstelle konnte nicht angesprochen werden"
+        Write-Warning "REST-Schnittstelle konnte nicht angesprochen werden"
     } 
 }
 
@@ -406,7 +412,7 @@ function Checkcardverification {
     }
     else {
         Show-Icon "error"
-        Write-Host "PinStatus ist nicht verifiziert"
+        Write-Warning "PinStatus ist nicht verifiziert"
     }
 
 }
@@ -726,6 +732,162 @@ function routing{
 }
 
 
+function multiprov{
+
+    $sqlQuery = @"
+    COLUMN CM_ADRESSE   format a16 HEADING "CM Adresse"
+    COLUMN USERNAME     format a40 HEADING "KIM Adresse"
+    COLUMN POP3         format 9999 HEADING "POP3"
+    COLUMN SMTP         format 9999 HEADING "SMTP"
+
+    SELECT  COMM_KIM_ACCOUNT_CM.CM_ADRESSE
+    ,COMM_ACCOUNT.USERNAME
+    ,COMM_KIM_ACCOUNT_CM.POP3
+    ,COMM_KIM_ACCOUNT_CM.SMTP
+    FROM COMM_KIM_ACCOUNT_CM
+    INNER JOIN COMM_ACCOUNT
+    ON COMM_ACCOUNT.KEYID = COMM_KIM_ACCOUNT_CM.COMM_ACCOUNT;
+"@
+
+$sqlQuery | sqlplus msuser/msuser1234@medistar
+}
+
+function timeout{
+    $fehlerlog = "\KIM\KIM_Assist\data\kim\log\debug.log"
+    $fpath = Join-Path -path $ms_path -ChildPath $fehlerlog
+
+    #Prüfen, ob Datei existiert
+    if (! (Test-Path -path $fpath)) {
+        Show-Icon "error"
+        Write-Host "Kein 'debug.log' gefunden: $fpath"
+        return
+    }
+
+    #Wenn "has PinStatus 'VERIFIED'" im Log vorkommt, vermutlich Firewall im Einsatz
+    if ((Get-Content $fpath) -Match "failed: Connection timed out") {
+        Show-Icon "error"
+        Write-Warning "Time-Out in der LOG-Datei gefunden!"
+        Show-Icon "error"
+        Write-Warning "$fpath"
+    }
+    else {
+        Show-Icon "success"
+        Write-Host "kein Time-Out in der LOG-Datei gefunden"
+    }
+}
+
+function simulation{
+
+    $inp = Read-Host -Prompt "IP Adresse des Konnektors: "
+
+    if($inp -eq ""){
+        return
+    }else{
+        nslookup accounts.tm.kim.telematik $inp
+    }
+
+    tracert 100.102.7.140
+}
+
+function internFail{
+    $fehlerlog = "KIM\KIM_Clientmodul\logs\cm.fehler.log"
+    $fpath = Join-Path -path $ms_path -ChildPath $fehlerlog
+
+    #Prüfen, ob Datei existiert
+    if (! (Test-Path -path $fpath)) {
+        Show-Icon "error"
+        Write-Warning "Kein 'cm.fehler.log' gefunden: $fpath"
+        return
+    }
+
+    #Wenn "interner Fehler'" im Log vorkommt, Kartenleser neustarten
+    if ((Get-Content $fpath) -Match "KonnektorExeption: Interner Fehler") {
+        Show-Icon "error"
+        Write-Warning "KonnektorExeption: Interner Fehler in der LOG Datei gefunden, bitte Kartenleser neustarten"
+        Show-Icon "error"
+        Write-Warning "$fpath"
+    }
+    else {
+        Show-Icon "success"
+        Write-Host "keine Meldung gefunden"
+    }
+
+}
+
+function connectLOGservice{
+    $fehlerlog = "\connect\log\Communicator.log"
+    $fpath = Join-Path -path $appdata -ChildPath $fehlerlog
+
+    #Prüfen, ob Datei existiert
+    if (! (Test-Path -path $fpath)) {
+        Show-Icon "error"
+        Write-Warning "keine 'communicator.log': $fpath"
+        return
+    }
+
+    #Wenn "Sending of message failed Couldn't connect to host, port: MEDISTAR, 8465; timeout -1" im Log vorkommt
+    if ((Get-Content $fpath) -Match "Sending of message failed Couldn't connect to host, port") {
+        Show-Icon "error"
+        Write-Warning "'Couldn't connect to host, port' in der LOG Datei gefunden, bitte Dienst und Ports pruefen!"
+        Show-Icon "error"
+        Write-Warning "$fpath"
+    }
+    else {
+        Show-Icon "success"
+        Write-Host "keine Meldung gefunden"
+    }
+
+}
+
+function mtaFail{
+    $fehlerlog = "KIM\KIM_Clientmodul\logs\cm.fehler.log"
+    $fpath = Join-Path -path $ms_path -ChildPath $fehlerlog
+
+    #Prüfen, ob Datei existiert
+    if (! (Test-Path -path $fpath)) {
+        Show-Icon "error"
+        Write-Warning "Kein 'cm.fehler.log' gefunden: $fpath"
+        return
+    }
+
+    #Wenn "Error in MTA'" im Log vorkommt = verloren, ggfs auf Virenscanner prüfen
+    if ((Get-Content $fpath) -Match "error in MTA Connection") {
+        Show-Icon "error"
+        Write-Warning "'Error in MTA Connection' gefunden, ggfs auf Virenscanner achten"
+        Show-Icon "error"
+        Write-Warning "$fpath"
+    }
+    else {
+        Show-Icon "success"
+        Write-Host "keine Meldung gefunden"
+    }
+
+}
+
+function keystoreFail{
+    $fehlerlog = "KIM\KIM_Clientmodul\logs\cm.fehler.log"
+    $fpath = Join-Path -path $ms_path -ChildPath $fehlerlog
+
+    #Prüfen, ob Datei existiert
+    if (! (Test-Path -path $fpath)) {
+        Show-Icon "error"
+        Write-Warning "Kein 'cm.fehler.log' gefunden: $fpath"
+        return
+    }
+
+    #Wenn "Keystorepassword was incorrect" im Log vorkommt = über IKIM ein neues anlegen
+    if ((Get-Content $fpath) -Match "keystore password was incorrect") {
+        Show-Icon "error"
+        Write-Warning "'keystore password was incorrect' gefunden, ggfs neues ueber IKIM anlegen"
+        Show-Icon "error"
+        Write-Warning "$fpath"
+    }
+    else {
+        Show-Icon "success"
+        Write-Host "keine Meldung gefunden"
+    }
+
+}
 
 #Script Version
 #updateS
@@ -735,7 +897,7 @@ PrintBanner
 Write-Host ""
 Write-Host ""
 
-$inpt = Read-Host -Prompt "CGM KIM [c], kv.dox [k] oder KIM 1.5 [a] ?"
+$inpt = Read-Host -Prompt "CGM KIM [c] oder kv.dox [k] ?"
 
 if ($inpt -eq "s"){
     Start-Process "https://www.memski.org/snake.html"
@@ -948,12 +1110,61 @@ if ($inpt -eq "c"){
     Write-Host "  ---------------------------------"
     Secret
     Write-Host ""
-          
+
     #FW checken:
     Write-Host ""
     Write-Host "  Windows Firewall"
     Write-Host "  ---------------------------------"
     FWCHeck
+    Write-Host ""
+
+    #Multikonnektor checken:
+    Write-Host ""
+    Write-Host "  Multikonnektoranbindung"
+    Write-Host "  ---------------------------------"
+    multiprov
+    Write-Host ""
+
+    #cm.fehler.log - Interner Fehler:
+    Write-Host ""
+    Write-Host "  cm.fehler.log - Interner Fehler"
+    Write-Host "  ---------------------------------"
+    internFail
+    Write-Host ""
+
+    #cm.fehler.log - Interner Fehler:
+    Write-Host ""
+    Write-Host "  communicator.log - 'Couldn't connect to host, port'"
+    Write-Host "  ---------------------------------"
+    connectLOGservice
+    Write-Host ""
+
+    #cm.fehler.log - MTA Error:
+    Write-Host ""
+    Write-Host "  cm.fehler.log - 'Error in MTA Connection'"
+    Write-Host "  ---------------------------------"
+    mtaFail
+    Write-Host ""
+
+    #cm.fehler.log - keystore password was incorrect:
+    Write-Host ""
+    Write-Host "  cm.fehler.log - 'keystore password was incorrect'"
+    Write-Host "  ---------------------------------"
+    keystoreFail
+    Write-Host ""
+    
+    #LOG Datei auf Time Out prüfen:
+    Write-Host ""
+    Write-Host "  debug.log - Time-Out Accountmanager"
+    Write-Host "  ---------------------------------"
+    timeout
+    Write-Host ""
+
+    #Verbindungssimulation:
+    Write-Host ""
+    Write-Host "  Verbindung Accountmanager"
+    Write-Host "  ---------------------------------"
+    simulation
     Write-Host ""
     Write-Host ""
     Write-Host ""
