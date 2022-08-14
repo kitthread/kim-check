@@ -12,8 +12,8 @@ $ms_path = $ENV:medistardir
 $sys_path = "C:\Windows\SysWOW64\sysconf.s"
 $appdata = $ENV:APPDATA
 
-$ms_version = "404.86"
-$connect_version = "2.2.0.1"
+$ms_version = "404.87"
+$connect_version = "2.3.1"
 
 $certificates_to_check = "KIM\KIM_Assist\data\kim\data\*.p12"
 $certificates_to_check2 = "KIM\KIM_Assist\data\kim\data\"
@@ -27,10 +27,10 @@ $kim_assist_current_version = "KIM-Einrichtung-Assistent.jar"
 $kim_assist_old_version = "KIM-Einrichtung-Assistent-1.0.14.jar"
 
 $kim_client_path = "KIM\KIM_Clientmodul\"
-$kim_client_current_version = "KIM-CM-10.0.2-15.jar"
-$kim_client_old_version = "KIM-CM-10.0.2-14.jar"
+$kim_client_current_version = "KIM-CM-10.0.2-16.jar"
+$kim_client_old_version = "KIM-CM-10.0.2-15.jar"
 
-$scriptversion = "2.0" # to use func updateS uncomment line 750
+$scriptversion = "2.1" # to use func updateS uncomment line XXX
 
 # --- Ab hier müssen keine Änderungen mehr vergenommen werden ---
 
@@ -82,7 +82,7 @@ function Show-Icon {
 
 function updateS{
 
-	$http_request = [System.Net.WebRequest]::Create('https://www.memski.org/2.0.html')
+	$http_request = [System.Net.WebRequest]::Create('https://www.memski.org/2.1.html')
     try {
         $http_response = $http_request.GetResponse()
 
@@ -99,7 +99,7 @@ function updateS{
         Write-Warning "Das Script ist nicht mehr aktuell."
         Write-Warning "Bitte die aktuelle Version nutzen."
         
-        $source = "https://www.memski.org/kim_check_2.0s.zip"
+        $source = "https://www.memski.org/kim_check_2.1.zip"
         $dest = $ms_path+"\archiv\" + $(Split-Path -Path $source -Leaf)
         
         Invoke-WebRequest -Uri $source -OutFile $dest -UseBasicParsing
@@ -752,143 +752,6 @@ function multiprov{
 $sqlQuery | sqlplus msuser/msuser1234@medistar
 }
 
-function timeout{
-    $fehlerlog = "\KIM\KIM_Assist\data\kim\log\debug.log"
-    $fpath = Join-Path -path $ms_path -ChildPath $fehlerlog
-
-    #Prüfen, ob Datei existiert
-    if (! (Test-Path -path $fpath)) {
-        Show-Icon "error"
-        Write-Host "Kein 'debug.log' gefunden: $fpath"
-        return
-    }
-
-    #Wenn "has PinStatus 'VERIFIED'" im Log vorkommt, vermutlich Firewall im Einsatz
-    if ((Get-Content $fpath) -Match "failed: Connection timed out") {
-        Show-Icon "error"
-        Write-Warning "Time-Out in der LOG-Datei gefunden!"
-        Show-Icon "error"
-        Write-Warning "$fpath"
-    }
-    else {
-        Show-Icon "success"
-        Write-Host "kein Time-Out in der LOG-Datei gefunden"
-    }
-}
-
-function simulation{
-
-    $inp = Read-Host -Prompt "IP Adresse des Konnektors: "
-
-    if($inp -eq ""){
-        return
-    }else{
-        nslookup accounts.tm.kim.telematik $inp
-    }
-
-    tracert 100.102.7.140
-}
-
-function internFail{
-    $fehlerlog = "KIM\KIM_Clientmodul\logs\cm.fehler.log"
-    $fpath = Join-Path -path $ms_path -ChildPath $fehlerlog
-
-    #Prüfen, ob Datei existiert
-    if (! (Test-Path -path $fpath)) {
-        Show-Icon "error"
-        Write-Warning "Kein 'cm.fehler.log' gefunden: $fpath"
-        return
-    }
-
-    #Wenn "interner Fehler'" im Log vorkommt, Kartenleser neustarten
-    if ((Get-Content $fpath) -Match "KonnektorExeption: Interner Fehler") {
-        Show-Icon "error"
-        Write-Warning "KonnektorExeption: Interner Fehler in der LOG Datei gefunden, bitte Kartenleser neustarten"
-        Show-Icon "error"
-        Write-Warning "$fpath"
-    }
-    else {
-        Show-Icon "success"
-        Write-Host "keine Meldung gefunden"
-    }
-
-}
-
-function connectLOGservice{
-    $fehlerlog = "\connect\log\Communicator.log"
-    $fpath = Join-Path -path $appdata -ChildPath $fehlerlog
-
-    #Prüfen, ob Datei existiert
-    if (! (Test-Path -path $fpath)) {
-        Show-Icon "error"
-        Write-Warning "keine 'communicator.log': $fpath"
-        return
-    }
-
-    #Wenn "Sending of message failed Couldn't connect to host, port: MEDISTAR, 8465; timeout -1" im Log vorkommt
-    if ((Get-Content $fpath) -Match "Sending of message failed Couldn't connect to host, port") {
-        Show-Icon "error"
-        Write-Warning "'Couldn't connect to host, port' in der LOG Datei gefunden, bitte Dienst und Ports pruefen!"
-        Show-Icon "error"
-        Write-Warning "$fpath"
-    }
-    else {
-        Show-Icon "success"
-        Write-Host "keine Meldung gefunden"
-    }
-
-}
-
-function mtaFail{
-    $fehlerlog = "KIM\KIM_Clientmodul\logs\cm.fehler.log"
-    $fpath = Join-Path -path $ms_path -ChildPath $fehlerlog
-
-    #Prüfen, ob Datei existiert
-    if (! (Test-Path -path $fpath)) {
-        Show-Icon "error"
-        Write-Warning "Kein 'cm.fehler.log' gefunden: $fpath"
-        return
-    }
-
-    #Wenn "Error in MTA'" im Log vorkommt = verloren, ggfs auf Virenscanner prüfen
-    if ((Get-Content $fpath) -Match "error in MTA Connection") {
-        Show-Icon "error"
-        Write-Warning "'Error in MTA Connection' gefunden, ggfs auf Virenscanner achten"
-        Show-Icon "error"
-        Write-Warning "$fpath"
-    }
-    else {
-        Show-Icon "success"
-        Write-Host "keine Meldung gefunden"
-    }
-
-}
-
-function keystoreFail{
-    $fehlerlog = "KIM\KIM_Clientmodul\logs\cm.fehler.log"
-    $fpath = Join-Path -path $ms_path -ChildPath $fehlerlog
-
-    #Prüfen, ob Datei existiert
-    if (! (Test-Path -path $fpath)) {
-        Show-Icon "error"
-        Write-Warning "Kein 'cm.fehler.log' gefunden: $fpath"
-        return
-    }
-
-    #Wenn "Keystorepassword was incorrect" im Log vorkommt = über IKIM ein neues anlegen
-    if ((Get-Content $fpath) -Match "keystore password was incorrect") {
-        Show-Icon "error"
-        Write-Warning "'keystore password was incorrect' gefunden, ggfs neues ueber IKIM anlegen"
-        Show-Icon "error"
-        Write-Warning "$fpath"
-    }
-    else {
-        Show-Icon "success"
-        Write-Host "keine Meldung gefunden"
-    }
-
-}
-
 #Script Version
 #updateS
 
@@ -1123,50 +986,6 @@ if ($inpt -eq "c"){
     Write-Host "  Multikonnektoranbindung"
     Write-Host "  ---------------------------------"
     multiprov
-    Write-Host ""
-
-    #cm.fehler.log - Interner Fehler:
-    Write-Host ""
-    Write-Host "  cm.fehler.log - Interner Fehler"
-    Write-Host "  ---------------------------------"
-    internFail
-    Write-Host ""
-
-    #cm.fehler.log - Interner Fehler:
-    Write-Host ""
-    Write-Host "  communicator.log - 'Couldn't connect to host, port'"
-    Write-Host "  ---------------------------------"
-    connectLOGservice
-    Write-Host ""
-
-    #cm.fehler.log - MTA Error:
-    Write-Host ""
-    Write-Host "  cm.fehler.log - 'Error in MTA Connection'"
-    Write-Host "  ---------------------------------"
-    mtaFail
-    Write-Host ""
-
-    #cm.fehler.log - keystore password was incorrect:
-    Write-Host ""
-    Write-Host "  cm.fehler.log - 'keystore password was incorrect'"
-    Write-Host "  ---------------------------------"
-    keystoreFail
-    Write-Host ""
-    
-    #LOG Datei auf Time Out prüfen:
-    Write-Host ""
-    Write-Host "  debug.log - Time-Out Accountmanager"
-    Write-Host "  ---------------------------------"
-    timeout
-    Write-Host ""
-
-    #Verbindungssimulation:
-    Write-Host ""
-    Write-Host "  Verbindung Accountmanager"
-    Write-Host "  ---------------------------------"
-    simulation
-    Write-Host ""
-    Write-Host ""
     Write-Host ""
 
     pause
