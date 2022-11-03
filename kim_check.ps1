@@ -82,7 +82,7 @@ function Show-Icon {
 
 function updateS{
 
-	$http_request = [System.Net.WebRequest]::Create('https://www.memski.org/2.1.html')
+	$http_request = [System.Net.WebRequest]::Create('https://www.memski.org/2.2.html')
     try {
         $http_response = $http_request.GetResponse()
 
