@@ -1,19 +1,19 @@
 # --- Parameter zur Überprüfung festlegen ---
 powershell -command Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope CurrentUser
-powershell -command "[console]::WindowWidth=120; [console]::WindowHeight=50; [console]::BufferWidth=[console]::WindowWidth"
+powershell -command "mode 200"
 
 $ports_to_check_cgm = 8995, 8465, 9999, 4443 
 $ports_to_check_kbv = 4443, 995, 465
 
-$services_to_check_cgm = , "CGM_KIM_ClientModule"
+$services_to_check_cgm = , "CGM_KIM_ClientModule*"
 $services_to_check_kbv = , "kv.dox KIM Clientmodul Service"
 
 $ms_path = $ENV:medistardir
 $sys_path = "C:\Windows\SysWOW64\sysconf.s"
 $appdata = $ENV:APPDATA
 
-$ms_version = "404.87"
-$connect_version = "2.3.1"
+$ms_version = "404.90"
+$connect_version = "2.4.1"
 
 $certificates_to_check = "KIM\KIM_Assist\data\kim\data\*.p12"
 $certificates_to_check2 = "KIM\KIM_Assist\data\kim\data\"
@@ -30,7 +30,7 @@ $kim_client_path = "KIM\KIM_Clientmodul\"
 $kim_client_current_version = "KIM-CM-10.0.2-16.jar"
 $kim_client_old_version = "KIM-CM-10.0.2-15.jar"
 
-$scriptversion = "2.1" # to use func updateS uncomment line XXX
+$scriptversion = "2.2" # to use func updateS uncomment line 777
 
 # --- Ab hier müssen keine Änderungen mehr vergenommen werden ---
 
@@ -99,7 +99,7 @@ function updateS{
         Write-Warning "Das Script ist nicht mehr aktuell."
         Write-Warning "Bitte die aktuelle Version nutzen."
         
-        $source = "https://www.memski.org/kim_check_2.1.zip"
+        $source = "https://www.memski.org/kim_check_2.2.zip"
         $dest = $ms_path+"\archiv\" + $(Split-Path -Path $source -Leaf)
         
         Invoke-WebRequest -Uri $source -OutFile $dest -UseBasicParsing
@@ -732,21 +732,42 @@ function routing{
 }
 
 
-function multiprov{
+function kimconf{
 
     $sqlQuery = @"
-    COLUMN CM_ADRESSE   format a16 HEADING "CM Adresse"
-    COLUMN USERNAME     format a40 HEADING "KIM Adresse"
-    COLUMN POP3         format 9999 HEADING "POP3"
-    COLUMN SMTP         format 9999 HEADING "SMTP"
+    SET LINESIZE 400 PAGESIZE 4000 recsep off
+    COLUMN CM_ADRESSE       format a16 HEADING "CM Adresse"
+    COLUMN USERNAME         format a30 HEADING "KIM Adresse"
+    COLUMN POP3             format 9999 HEADING "POP3"
+    COLUMN SMTP             format 9999 HEADING "SMTP"
+    COLUMN MGMT             format 9999 HEADING "MGMT"
+    COLUMN FD_ADRESSE       format a30 HEADING "Fachdienstadresse"
+    COLUMN FD_POP3          format 9999 HEADING "FD POP3"
+    COLUMN FD_SMTP          format 9999 HEADING "FD SMTP"
+    COLUMN MAIL_KONTOTYP    format a4 HEADING "TYP"
+    COLUMN CLIENTSYSTEM     format a16 HEADING "CLIENTSYSTEM"
+    COLUMN MANDANT          format a16 HEADING "MANDANT"
+    COLUMN ARBEITSPLATZ     format a16 HEADING "ARBEITSPLATZ"
+    COLUMN IP               format a16 HEADING "KONNEKTOR"
 
     SELECT  COMM_KIM_ACCOUNT_CM.CM_ADRESSE
     ,COMM_ACCOUNT.USERNAME
     ,COMM_KIM_ACCOUNT_CM.POP3
     ,COMM_KIM_ACCOUNT_CM.SMTP
+    ,COMM_KIM_ACCOUNT_CM.MGMT
+    ,COMM_KIM_ACCOUNT_CM.FD_ADRESSE
+    ,COMM_KIM_ACCOUNT_CM.FD_SMTP
+    ,COMM_KIM_ACCOUNT_CM.FD_POP3
+    ,COMM_KIM_ACCOUNT_CM.MAIL_KONTOTYP
+    ,COMM_KIM_ACCOUNT_CM.CLIENTSYSTEM
+    ,COMM_KIM_ACCOUNT_CM.MANDANT
+    ,COMM_KIM_ACCOUNT_CM.ARBEITSPLATZ,
+    EGK_CONF_KONNEKTOREN.IP
     FROM COMM_KIM_ACCOUNT_CM
     INNER JOIN COMM_ACCOUNT
-    ON COMM_ACCOUNT.KEYID = COMM_KIM_ACCOUNT_CM.COMM_ACCOUNT;
+    ON COMM_ACCOUNT.KEYID = COMM_KIM_ACCOUNT_CM.COMM_ACCOUNT
+    INNER JOIN EGK_CONF_KONNEKTOREN
+    ON EGK_CONF_KONNEKTOREN.KEYID = COMM_KIM_ACCOUNT_CM.EGK_CONF_KONNEKTOREN;
 "@
 
 $sqlQuery | sqlplus msuser/msuser1234@medistar
@@ -780,24 +801,6 @@ if ($inpt -eq "a"){
 
 if ($inpt -eq "k"){
    
-    Write-Host ""
-    Write-Host "  Achtung!"
-    Write-Host ""
-    Write-Host ""
-    pause
-        
-    Write-Host ""
-    Write-Host "  Es geht gleich los!"
-    Write-Host ""
-    Write-Host ""
-    pause
-
-    Write-Host ""
-    Write-Host "  Alle anschnallen!"
-    Write-Host ""
-    Write-Host ""
-    pause
-
     #Dienst
     Write-Host ""
     Write-Host "  Status Windowsdienst"
@@ -824,18 +827,16 @@ if ($inpt -eq "k"){
     Write-Host ""
      
     #Plugin checken:
-    Write-Host ""
-    Write-Host "  Connect KIM-Plugin Konfiguration"
-    Write-Host "  ---------------------------------"
-    Plugin
-    Write-Host ""
+    #Write-Host ""
+    #Write-Host "  Connect KIM-Plugin Konfiguration"
+    #Write-Host "  ---------------------------------"
+    #Plugin
+    #Write-Host ""
      
     Write-Host ""
-    Write-Host " Info vom Autor"
+    Write-Host " KIM Konfiguration"
     Write-Host "  ---------------------------------"
-    Show-Icon "success"
-    Write-Host "Mehr ist erstmal nicht interessant..."
-    Write-Host ""
+    kimconf
     Write-Host ""
     Pause
     Return
@@ -926,11 +927,11 @@ if ($inpt -eq "c"){
     Write-Host ""
           
     #Plugin checken:
-    Write-Host ""
-    Write-Host "  Connect KIM-Plugin Konfiguration"
-    Write-Host "  ---------------------------------"
-    Plugin
-    Write-Host ""
+    #Write-Host ""
+    #Write-Host "  Connect KIM-Plugin Konfiguration"
+    #Write-Host "  ---------------------------------"
+    #Plugin
+    #Write-Host ""
           
     #REST-Check:
     Write-Host ""
@@ -983,9 +984,9 @@ if ($inpt -eq "c"){
 
     #Multikonnektor checken:
     Write-Host ""
-    Write-Host "  Multikonnektoranbindung"
+    Write-Host "  KIM Konfiguration"
     Write-Host "  ---------------------------------"
-    multiprov
+    kimconf
     Write-Host ""
 
     pause
